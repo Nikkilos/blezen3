@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Level 1 – Zinnen bij het plaatje</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    body{
+      margin:0;
+      background:#1b1b1b;
+      color:#f5f5f5;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:100vh;
+    }
+
+    .screen{
+      width:900px;
+      max-height:95vh;
+      overflow:auto;
+      max-width:100%;
+      padding:24px;
+      border-radius:16px;
+      background:#2a2a2a;
+      box-shadow:0 10px 30px rgba(0,0,0,0.4);
+      position:relative;
+      overflow:visible;
+    }
+
+    .center-row{
+      display:flex;
+      justify-content:center;
+      gap:12px;
+      margin-top:16px;
+      flex-wrap:wrap;
+    }
+
+    button{
+      font-size:16px;
+      padding:10px 24px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      background:#ffcc4d;
+      color:#3a2500;
+      font-weight:600;
+      box-shadow:0 4px 10px rgba(0,0,0,0.5);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease;
+    }
+
+    button:disabled{
+      opacity:0.4;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+
+    button:not(:disabled):hover{
+      transform: translateY(-1px);
+      box-shadow:0 6px 14px rgba(0,0,0,0.6);
+    }
+
+    /* Vragen-deel */
+
+    #q-image{
+      max-width:260px;
+      border-radius:10px;
+      display:block;
+      margin:0 auto 12px;
+      background:#1f1f1f;
+      padding:6px;
+    }
+
+    #q-sentences{
+      max-width:520px;
+      margin:0 auto;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .sentence-btn{
+      width:100%;
+      text-align:left;
+      padding:8px 12px;
+      border-radius:8px;
+      background:#444;
+      color:#f5f5f5;
+      border:1px solid #666;
+      cursor:pointer;
+      font-size:15px;
+    }
+
+    .sentence-btn:hover{ background:#555; }
+
+    #spel1-feedback{
+      margin-top:10px;
+      font-weight:600;
+      text-align:center;
+      min-height:1.2em;
+    }
+
+    .good{ color:#a5d6a7; }
+    .bad { color:#ef9a9a; }
+
+    /* Eindscherm */
+
+    #end-part{ text-align:center; }
+
+    #end-image{
+      max-width:320px;
+      width:80%;
+      margin:0 auto 16px;
+      display:block;
+      border-radius:12px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.6);
+    }
+
+    #story-status{
+      margin-top:10px;
+      min-height:1.2em;
+      font-weight:600;
+    }
+
+    .cookie-box{
+      margin-top:12px;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      background:#1f1f1f;
+      border:1px solid #3a3a3a;
+      border-radius:12px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    }
+
+    .cookie-count{
+      font-size:22px;
+      font-weight:800;
+      color:#ffcc4d;
+      letter-spacing:0.3px;
+    }
+
+    /* Intro overlay (verplichte uitleg) */
+
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.72);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+
+    .overlay-card{
+      width:min(560px, 92vw);
+      background:#2a2a2a;
+      border:1px solid #3a3a3a;
+      border-radius:18px;
+      padding:18px 18px 16px;
+      box-shadow:0 14px 40px rgba(0,0,0,0.6);
+      text-align:center;
+    }
+
+    .headphone{
+      font-size:46px;
+      line-height:1;
+      margin:4px 0 10px;
+    }
+
+    .overlay-title{
+      font-size:20px;
+      font-weight:800;
+      margin:0 0 6px;
+    }
+
+    .overlay-text{
+      margin:0 0 14px;
+      opacity:0.95;
+    }
+
+    .tiny{
+      margin-top:10px;
+      font-size:13px;
+      opacity:0.8;
+      line-height:1.35;
+    }
+
+    .linklike{
+      background:transparent;
+      color:#ffcc4d;
+      border:1px solid rgba(255,204,77,0.45);
+      box-shadow:none;
+      padding:8px 16px;
+      border-radius:999px;
+    }
+    .linklike:hover{ transform:none; box-shadow:none; opacity:0.9; }
+
+  </style>
+</head>
+
+<body>
+  <div class="screen">
+
+    <!-- Verplichte uitleg-overlay -->
+    <div id="intro-overlay" class="overlay" aria-live="polite">
+      <div class="overlay-card">
+        <div class="headphone" aria-hidden="true">🎧</div>
+        <p class="overlay-title">Luister eerst naar de uitleg</p>
+        
+
+        <div class="center-row" style="margin-top:12px;">
+          <button id="btn-play-intro" type="button">▶️ Start uitleg</button>
+          
+        </div>
+
+        <p id="intro-status" class="tiny"></p>
+      </div>
+    </div>
+
+    <!-- Vragen-deel -->
+    <div id="quiz-part" style="display:none;">
+      <img id="q-image" src="" alt="vraag" />
+      <div id="q-sentences"></div>
+      <p id="spel1-feedback"></p>
+    </div>
+
+    <!-- Eindscherm -->
+    <div id="end-part" style="display:none;">
+      <img id="end-image" src="level1behaald.png" alt="Level 1 klaar">
+      <button id="play-story" type="button">🎧 Luister naar het verhaal</button>
+
+      <div id="cookie-result" class="cookie-box" style="display:none;">
+        <div aria-hidden="true" style="font-size:24px;">🍪</div>
+        <div>
+          <div style="font-size:13px; opacity:0.85; text-align:left;">Verdiende hondenkoekjes</div>
+          <div id="cookie-count" class="cookie-count">0</div>
+        </div>
+      </div>
+
+      <p id="story-status"></p>
+
+      <div class="center-row" style="margin-top:14px;">
+        <button id="btn-to-map" type="button" style="display:none;">⬅ Terug naar de kaart</button>
+      </div>
+    </div>
+
+    
+
+    <!-- Audio -->
+    <audio id="explain-audio" src="audio1.mp4" preload="auto"></audio>
+    <audio id="end-audio" src="audio4.mp4" preload="auto"></audio>
+  </div>
+
+  <script>
+    /* ---------- VASTE VRAGEN VOOR LEVEL 1 (weggelopen hond) ---------- */
+
+    const questions = [
+      {
+        image: "lopen.png",
+        alt: "Boris loopt met Keesje in het bos",
+        correct: "Boris loopt met Keesje in het bos.",
+        options: [
+          "Boris loopt met Keesje in het bos.",
+          "Keesje slaapt in zijn mand.",
+          "Boris gooit de bal in de tuin."
+        ]
+      },
+      {
+        image: "snuffelen.png",
+        alt: "Keesje ruikt aan de boom",
+        correct: "Keesje ruikt aan de boom.",
+        options: [
+          "Keesje ruikt aan de boom.",
+          "Keesje drinkt water.",
+          "Boris aait Keesje."
+        ]
+      },
+      {
+        image: "vogel.png",
+        alt: "Keesje ziet een vogel vliegen",
+        correct: "Keesje ziet een vogel vliegen.",
+        options: [
+          "Keesje ziet een vogel vliegen.",
+          "Keesje kijkt naar zijn baasje.",
+          "Boris ziet een bot liggen."
+        ]
+      },
+      {
+        image: "rennen.png",
+        alt: "Keesje rent naar de vogel toe",
+        correct: "Keesje rent naar de vogel toe.",
+        options: [
+          "Keesje rent naar de vogel toe.",
+          "Keesje rolt een bal naar Boris toe.",
+          "De hond ligt naast Boris op het pad."
+        ]
+      }
+    ];
+
+    /* ---------- STATE ---------- */
+
+    let currentQuestionIndex = 0;
+    let wrongClicksSpel1 = 0;
+    let cookiesThisRun = 0;
+
+    /* ---------- DOM ---------- */
+
+    const introOverlay  = document.getElementById("intro-overlay");
+    const introStatus   = document.getElementById("intro-status");
+    const playIntroBtn  = document.getElementById("btn-play-intro");
+    
+
+    const quizPart      = document.getElementById("quiz-part");
+    const endPart       = document.getElementById("end-part");
+
+    const qImage        = document.getElementById("q-image");
+    const qSentences    = document.getElementById("q-sentences");
+    const spel1Feedback = document.getElementById("spel1-feedback");
+
+    const playStoryBtn  = document.getElementById("play-story");
+    const storyStatus   = document.getElementById("story-status");
+    const endAudio      = document.getElementById("end-audio");
+    const explainAudio  = document.getElementById("explain-audio");
+
+    const cookieResult  = document.getElementById("cookie-result");
+    const cookieCountEl = document.getElementById("cookie-count");
+    const toMapBtn      = document.getElementById("btn-to-map");
+
+    
+
+    /* ---------- HELPERS ---------- */
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function normalizeSentence(s) {
+      return s.trim().replace(/\.+$/, "").toLowerCase();
+    }
+
+    function sentencesEqual(a, b) {
+      return normalizeSentence(a) === normalizeSentence(b);
+    }
+
+    function goBackToMap() {
+      localStorage.setItem("verhalenbos_returnFromLevel", "true");
+      window.location.href = "index.html";
+    }
+
+    function calcCookies(wrong) {
+      // 0 foutjes = 5 koekjes
+      // 1 foutje  = 4 koekjes
+      // 2 foutjes = 3 koekjes
+      // 3-4-5     = 2 koekjes
+      // 6+        = 1 koekje
+      if (wrong <= 0) return 5;
+      if (wrong === 1) return 4;
+      if (wrong === 2) return 3;
+      if (wrong >= 3 && wrong <= 5) return 2;
+      return 1;
+    }
+
+    /* ---------- INTRO (VERPLICHTE UITLEG) ---------- */
+
+    function lockGame() {
+      introOverlay.style.display = "flex";
+      quizPart.style.display = "none";
+      endPart.style.display = "none";
+    }
+
+    function unlockGame() {
+      introOverlay.style.display = "none";
+      quizPart.style.display = "block";
+      initSpel1();
+    }
+
+    async function playIntroAudio() {
+      introStatus.textContent = "Uitleg wordt afgespeeld...";
+      playIntroBtn.disabled = true;
+
+      try {
+        explainAudio.currentTime = 0;
+        await explainAudio.play();
+
+      } catch (e) {
+        introStatus.textContent = "Klik op ‘Start uitleg’ om te luisteren.";
+        playIntroBtn.disabled = false;
+
+      }
+    }
+
+    explainAudio.addEventListener("ended", () => {
+      introStatus.textContent = "Uitleg klaar. Je kunt nu spelen!";
+      setTimeout(unlockGame, 250);
+    });
+
+    playIntroBtn.addEventListener("click", playIntroAudio);
+    /* ---------- SPEL ---------- */
+
+    function initSpel1() {
+      currentQuestionIndex = 0;
+      wrongClicksSpel1 = 0;
+      cookiesThisRun = 0;
+
+      spel1Feedback.textContent = "";
+      spel1Feedback.className = "";
+
+      renderCurrentQuestion();
+    }
+
+    function renderCurrentQuestion() {
+      if (currentQuestionIndex >= questions.length) return;
+
+      const q = questions[currentQuestionIndex];
+
+      qImage.src = q.image;
+      qImage.alt = q.alt || "plaatje bij de zin";
+
+      qSentences.innerHTML = "";
+      spel1Feedback.textContent = "";
+      spel1Feedback.className = "";
+
+      const shuffledOptions = shuffle(q.options);
+      shuffledOptions.forEach(sentence => {
+        const btn = document.createElement("button");
+        btn.className = "sentence-btn";
+        btn.textContent = sentence;
+        btn.addEventListener("click", () => handleSentenceClick(sentence, q.correct));
+        qSentences.appendChild(btn);
+      });
+    }
+
+    function disableSentenceButtons() {
+      const buttons = qSentences.querySelectorAll("button");
+      buttons.forEach(b => b.disabled = true);
+    }
+
+    function handleSentenceClick(selected, correct) {
+      const isCorrect = sentencesEqual(selected, correct);
+
+      if (!isCorrect) {
+        wrongClicksSpel1++;
+        spel1Feedback.textContent = "Dat klopt nog niet. Lees nog eens goed.";
+        spel1Feedback.className = "bad";
+        return;
+      }
+
+      spel1Feedback.textContent = "Goed gedaan! Dat past bij het plaatje.";
+      spel1Feedback.className = "good";
+      disableSentenceButtons();
+
+      if (currentQuestionIndex === questions.length - 1) {
+        cookiesThisRun = calcCookies(wrongClicksSpel1);
+
+        const previousBest = Number(localStorage.getItem("level1_bestCookies") || 0);
+        if (cookiesThisRun > previousBest) {
+          localStorage.setItem("level1_bestCookies", String(cookiesThisRun));
+        }
+        localStorage.setItem("level1_lastCookies", String(cookiesThisRun));
+
+        setTimeout(() => {
+          quizPart.style.display = "none";
+          endPart.style.display  = "block";
+          storyStatus.textContent = "Luister naar het verhaal om af te sluiten.";
+          cookieResult.style.display = "none";
+          toMapBtn.style.display = "none";
+        }, 700);
+
+      } else {
+        currentQuestionIndex++;
+        setTimeout(() => renderCurrentQuestion(), 650);
+      }
+    }
+
+    /* ---------- VERHAAL / EINDE ---------- */
+
+    playStoryBtn.addEventListener("click", async () => {
+      storyStatus.textContent = "Het verhaal wordt afgespeeld...";
+      playStoryBtn.disabled = true;
+
+      try {
+        endAudio.currentTime = 0;
+        await endAudio.play();
+      } catch (e) {
+        storyStatus.textContent = "Het afspelen van het verhaal lukt niet.";
+        playStoryBtn.disabled = false;
+      }
+    });
+
+    endAudio.addEventListener("ended", () => {
+      const c = Number(localStorage.getItem("level1_lastCookies") || cookiesThisRun || 0);
+
+      // Opslaan voor de kaart (index_opgeknapt_eind gebruikt deze sleutel)
+      const prev = Number(localStorage.getItem("verhalenbos_level1_koekjes") || 0);
+      const bestForMap = Math.max(prev, c);
+      localStorage.setItem("verhalenbos_level1_koekjes", String(bestForMap));
+
+      cookieCountEl.textContent = String(c);
+      cookieResult.style.display = "inline-flex";
+
+      if (c >= 3) {
+        localStorage.setItem("verhalenbos_level1_completed_v2", "true");
+        storyStatus.textContent = "Goed gedaan! Je hebt dit level gehaald.";
+      } else {
+        localStorage.removeItem("verhalenbos_level1_completed_v2");
+        storyStatus.textContent = "Je hebt nog niet genoeg koekjes om dit level te halen. Probeer het nog eens!";
+      }
+
+      toMapBtn.style.display = "inline-block";
+      toMapBtn.disabled = false;
+      playStoryBtn.disabled = false;
+      playStoryBtn.textContent = "🎧 Verhaal opnieuw luisteren";
+
+      // Automatisch terug naar de kaart na 5 seconden (knop blijft ook werken)
+      clearTimeout(window.__verhalenbosReturnT);
+      window.__verhalenbosReturnT = setTimeout(() => { window.location.href = "index.html"; }, 5000);
+    });
+
+    toMapBtn.addEventListener("click", () => {
+      localStorage.setItem("verhalenbos_returnFromLevel", "true");
+      window.location.href = "index.html";
+    });
+
+    /* ---------- TERUGKNOP ---------- */
+
+    
+
+    /* ---------- START ---------- */
+
+    document.addEventListener("DOMContentLoaded", () => {
+      lockGame();
+
+    });
+  </script>
+</body>
+</html>

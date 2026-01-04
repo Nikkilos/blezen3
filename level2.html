@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 2 – Hondensporen memory</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    body {
+      margin: 0;
+      background: #1b1b1b;
+      color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .screen {
+      width: 900px;
+      max-width: 100%;
+      max-height: 95vh;
+      overflow: auto;
+      padding: 24px;
+      border-radius: 16px;
+      background: #2a2a2a;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    .center-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-size: 16px;
+      padding: 10px 24px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #ffcc4d;
+      color: #3a2500;
+      font-weight: 600;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.6);
+    }
+
+    /* Memory-grid */
+    #memory-grid {
+      max-width: 700px;
+      margin: 6px auto 0;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .memory-card {
+      position: relative;
+      background: #444;
+      border-radius: 10px;
+      padding: 8px;
+      height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 20px;
+      user-select: none;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s, opacity 0.15s;
+    }
+
+    .memory-card.flipped {
+      background: #222;
+      box-shadow: 0 0 10px rgba(255,255,255,0.3);
+    }
+
+    .memory-card.matched {
+      background: #2e7d32;
+      box-shadow: 0 0 10px rgba(129,199,132,0.8);
+      cursor: default;
+      opacity: 0.9;
+    }
+
+    .memory-card img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .memory-word {
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: lowercase;
+    }
+
+    #memory-feedback {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: 700;
+      min-height: 1.4em;
+    }
+    .good { color: #a5d6a7; }
+    .bad  { color: #ef9a9a; }
+
+    /* Eindscherm */
+    #end-part { text-align: center; }
+    #end-image {
+      max-width: 320px;
+      width: 80%;
+      margin: 0 auto 16px;
+      display: block;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    #story-status {
+      margin-top: 10px;
+      min-height: 1.2em;
+      font-weight: 700;
+    }
+
+    .cookie-box{
+      margin-top:12px;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      background:#1f1f1f;
+      border:1px solid #3a3a3a;
+      border-radius:12px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    }
+    .cookie-count{
+      font-size:22px;
+      font-weight:800;
+      color:#ffcc4d;
+      letter-spacing:0.3px;
+    }
+
+    /* Intro overlay (verplichte uitleg) */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.72);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .overlay-card{
+      width:min(560px, 92vw);
+      background:#2a2a2a;
+      border:1px solid #3a3a3a;
+      border-radius:18px;
+      padding:18px 18px 16px;
+      box-shadow:0 14px 40px rgba(0,0,0,0.6);
+      text-align:center;
+    }
+    .headphone{ font-size:46px; line-height:1; margin:4px 0 10px; }
+    .overlay-title{ font-size:20px; font-weight:800; margin:0 0 6px; }
+    .tiny{ margin-top:10px; font-size:13px; opacity:0.85; line-height:1.35; }
+  </style>
+</head>
+
+<body>
+  <div class="screen">
+
+    <!-- Verplichte uitleg-overlay -->
+    <div id="intro-overlay" class="overlay" aria-live="polite">
+      <div class="overlay-card">
+        <div class="headphone" aria-hidden="true">🎧</div>
+        <p class="overlay-title">Luister eerst naar de uitleg</p>
+
+        <div class="center-row" style="margin-top:12px;">
+          <button id="btn-play-intro" type="button">▶️ Start uitleg</button>
+        </div>
+
+        <p id="intro-status" class="tiny"></p>
+      </div>
+    </div>
+
+    <!-- Memory-spel -->
+    <div id="game-part" style="display:none;">
+      <div id="memory-grid"></div>
+      <p id="memory-feedback"></p>
+    </div>
+
+    <!-- Eindscherm -->
+    <div id="end-part" style="display:none;">
+      <img id="end-image" src="memorycompleet.png" alt="Memory compleet">
+      <button id="play-story" type="button">🎧 Luister naar het verhaal</button>
+
+      <div id="cookie-result" class="cookie-box" style="display:none;">
+        <div aria-hidden="true" style="font-size:24px;">🍪</div>
+        <div>
+          <div style="font-size:13px; opacity:0.85; text-align:left;">Verdiende hondenkoekjes</div>
+          <div id="cookie-count" class="cookie-count">0</div>
+        </div>
+      </div>
+
+      <p id="story-status"></p>
+
+      <div class="center-row" style="margin-top:14px;">
+        <button id="btn-to-map" type="button" style="display:none;">⬅ Terug naar de kaart</button>
+      </div>
+    </div>
+
+    <!-- Audio -->
+    <audio id="explain-audio" src="audio2.mp4" preload="auto"></audio>
+    <audio id="end-audio" src="audio5.mp4" preload="auto"></audio>
+  </div>
+
+  <script>
+    /* ---------- MEMORY-SET VOOR LEVEL 2 ---------- */
+    const memoryPairs = [
+      { key: "modder", word: "modder", img: "modder.png" },
+      { key: "blaft",  word: "blaft",  img: "blaft.png"  },
+      { key: "poot",   word: "poot",   img: "poot.png"   },
+      { key: "wolk",   word: "wolk",   img: "wolk.png"   },
+      { key: "regen",  word: "regen",  img: "regen.png"  },
+      { key: "spoor",  word: "spoor",  img: "spoor.png"  }
+    ];
+
+    /* ---------- STATE ---------- */
+    let cards = [];
+    let firstIndex = null;
+    let lockBoard = false;
+    let matchedPairs = 0;
+    let wrongAttempts = 0;
+    let cookiesThisRun = 0;
+
+    /* ---------- DOM ---------- */
+    const introOverlay  = document.getElementById("intro-overlay");
+    const introStatus   = document.getElementById("intro-status");
+    const playIntroBtn  = document.getElementById("btn-play-intro");
+
+    const gamePart       = document.getElementById("game-part");
+    const memoryGrid     = document.getElementById("memory-grid");
+    const memoryFeedback = document.getElementById("memory-feedback");
+
+    const endPart      = document.getElementById("end-part");
+    const playStoryBtn = document.getElementById("play-story");
+    const storyStatus  = document.getElementById("story-status");
+    const endAudio     = document.getElementById("end-audio");
+    const explainAudio = document.getElementById("explain-audio");
+
+    const cookieResult  = document.getElementById("cookie-result");
+    const cookieCountEl = document.getElementById("cookie-count");
+    const toMapBtn      = document.getElementById("btn-to-map");
+
+    /* ---------- HELPERS ---------- */
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function goBackToMap() {
+      localStorage.setItem("verhalenbos_returnFromLevel", "true");
+      window.location.href = "index.html";
+    }
+
+    function calcCookies(wrong) {
+      // 0-6 fout  = 5 koekjes
+      // 7-10      = 4
+      // 11-13     = 3
+      // 14-16     = 2
+      // >16       = 1
+      if (wrong <= 6) return 5;
+      if (wrong <= 10) return 4;
+      if (wrong <= 13) return 3;
+      if (wrong <= 16) return 2;
+      return 1;
+    }
+
+    /* ---------- INTRO (VERPLICHTE UITLEG) ---------- */
+    function lockGame() {
+      introOverlay.style.display = "flex";
+      gamePart.style.display = "none";
+      endPart.style.display = "none";
+    }
+
+    function unlockGame() {
+      introOverlay.style.display = "none";
+      gamePart.style.display = "block";
+      startGame();
+    }
+
+    async function playIntroAudio() {
+      introStatus.textContent = "Uitleg wordt afgespeeld...";
+      playIntroBtn.disabled = true;
+      try {
+        explainAudio.currentTime = 0;
+        await explainAudio.play();
+      } catch (e) {
+        introStatus.textContent = "Klik op ‘Start uitleg’ om te luisteren.";
+        playIntroBtn.disabled = false;
+      }
+    }
+
+    explainAudio.addEventListener("ended", () => {
+      introStatus.textContent = "Uitleg klaar.";
+      setTimeout(unlockGame, 250);
+    });
+
+    playIntroBtn.addEventListener("click", playIntroAudio);
+    /* ---------- MEMORY-INIT ---------- */
+    function buildCards() {
+      const all = [];
+      memoryPairs.forEach(pair => {
+        all.push({ type: "word",  key: pair.key, word: pair.word });
+        all.push({ type: "image", key: pair.key, img: pair.img  });
+      });
+      cards = shuffle(all);
+    }
+
+    function renderGrid() {
+      memoryGrid.innerHTML = "";
+      memoryFeedback.textContent = "";
+      memoryFeedback.className = "";
+
+      cards.forEach((card, index) => {
+        const div = document.createElement("div");
+        div.className = "memory-card";
+        div.dataset.index = index;
+        div.innerHTML = ""; // dicht
+
+        div.addEventListener("click", () => handleCardClick(index));
+        memoryGrid.appendChild(div);
+      });
+    }
+
+    function showCardContent(index) {
+      const card = cards[index];
+      const div  = memoryGrid.querySelector(`[data-index="${index}"]`);
+      if (!div) return;
+
+      div.innerHTML = "";
+      if (card.type === "word") {
+        const span = document.createElement("span");
+        span.className = "memory-word";
+        span.textContent = card.word;
+        div.appendChild(span);
+      } else {
+        const img = document.createElement("img");
+        img.src = card.img;
+        img.alt = card.key;
+        div.appendChild(img);
+      }
+      div.classList.add("flipped");
+    }
+
+    function hideCardContent(index) {
+      const div = memoryGrid.querySelector(`[data-index="${index}"]`);
+      if (!div) return;
+      div.innerHTML = "";
+      div.classList.remove("flipped");
+    }
+
+    function markCardMatched(index) {
+      const div = memoryGrid.querySelector(`[data-index="${index}"]`);
+      if (!div) return;
+      div.classList.add("matched");
+      div.style.cursor = "default";
+    }
+
+    function handleCardClick(index) {
+      if (lockBoard) return;
+      const div  = memoryGrid.querySelector(`[data-index="${index}"]`);
+      if (!div || div.classList.contains("matched") || div.classList.contains("flipped")) return;
+
+      showCardContent(index);
+
+      if (firstIndex === null) {
+        firstIndex = index;
+        memoryFeedback.textContent = "";
+        memoryFeedback.className = "";
+        return;
+      }
+
+      lockBoard = true;
+      const firstCard = cards[firstIndex];
+      const secondCard = cards[index];
+
+      if (firstCard.key === secondCard.key && firstCard.type !== secondCard.type) {
+        setTimeout(() => {
+          markCardMatched(firstIndex);
+          markCardMatched(index);
+          matchedPairs++;
+
+          memoryFeedback.textContent = "Goed gevonden!";
+          memoryFeedback.className = "good";
+
+          firstIndex = null;
+          lockBoard = false;
+
+          if (matchedPairs === memoryPairs.length) {
+            handleMemoryCompleted();
+          }
+        }, 700);
+      } else {
+        wrongAttempts++;
+        memoryFeedback.textContent = "Dat hoort niet bij elkaar.";
+        memoryFeedback.className = "bad";
+
+        setTimeout(() => {
+          hideCardContent(firstIndex);
+          hideCardContent(index);
+          firstIndex = null;
+          lockBoard = false;
+        }, 1400);
+      }
+    }
+
+    function handleMemoryCompleted() {
+      cookiesThisRun = calcCookies(wrongAttempts);
+
+      const previousBest = Number(localStorage.getItem("level2_bestCookies") || 0);
+      if (cookiesThisRun > previousBest) {
+        localStorage.setItem("level2_bestCookies", String(cookiesThisRun));
+      }
+      localStorage.setItem("level2_lastCookies", String(cookiesThisRun));
+
+      memoryFeedback.textContent = "Je hebt alle paren gevonden!";
+      memoryFeedback.className = "good";
+
+      setTimeout(() => {
+        gamePart.style.display = "none";
+        endPart.style.display  = "block";
+        storyStatus.textContent = "Luister naar het verhaal om af te sluiten.";
+        cookieResult.style.display = "none";
+        toMapBtn.style.display = "none";
+      }, 650);
+    }
+
+    function startGame(){
+      buildCards();
+      firstIndex = null;
+      lockBoard = false;
+      matchedPairs = 0;
+      wrongAttempts = 0;
+      cookiesThisRun = 0;
+      renderGrid();
+    }
+
+    /* ---------- EINDSCHERM / VERHAAL ---------- */
+    playStoryBtn.addEventListener("click", async () => {
+      storyStatus.textContent = "Het verhaal wordt afgespeeld...";
+      playStoryBtn.disabled = true;
+      try {
+        endAudio.currentTime = 0;
+        await endAudio.play();
+      } catch (e) {
+        storyStatus.textContent = "Het afspelen van het verhaal lukt niet.";
+        playStoryBtn.disabled = false;
+      }
+    });
+
+    endAudio.addEventListener("ended", () => {
+      const c = Number(localStorage.getItem("level2_lastCookies") || cookiesThisRun || 0);
+
+      // Opslaan voor de kaart (totaal koekjes)
+      const prev = Number(localStorage.getItem("verhalenbos_level2_koekjes") || 0);
+      const bestForMap = Math.max(prev, c);
+      localStorage.setItem("verhalenbos_level2_koekjes", String(bestForMap));
+
+      cookieCountEl.textContent = String(c);
+      cookieResult.style.display = "inline-flex";
+
+      if (c >= 3) {
+        localStorage.setItem("verhalenbos_level2_completed_v2", "true");
+        storyStatus.textContent = "Goed gedaan! Je hebt dit level gehaald.";
+      } else {
+        localStorage.removeItem("verhalenbos_level2_completed_v2");
+        storyStatus.textContent = "Nog niet genoeg koekjes. Probeer het nog eens!";
+      }
+
+      toMapBtn.style.display = "inline-block";
+      playStoryBtn.disabled = false;
+      playStoryBtn.textContent = "🎧 Verhaal opnieuw luisteren";
+
+      // Automatisch terug naar de kaart na 5 seconden (knop blijft ook werken)
+      clearTimeout(window.__verhalenbosReturnT);
+      window.__verhalenbosReturnT = setTimeout(() => { window.location.href = "index.html"; }, 5000);
+    });
+
+    toMapBtn.addEventListener("click", goBackToMap);
+
+    /* ---------- START ---------- */
+    document.addEventListener("DOMContentLoaded", () => {
+      lockGame();
+
+    });
+  </script>
+</body>
+</html>

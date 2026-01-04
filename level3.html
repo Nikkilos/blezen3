@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Level 3 – Zaklamp spel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:black;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.screen{width:900px;max-width:100%;max-height:95vh;overflow:auto;padding:20px;border-radius:16px;background:#050505;color:white;position:relative}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;justify-content:center;align-items:center;z-index:10}
+.overlay-card{background:#111;border-radius:16px;padding:20px;text-align:center}
+button{padding:10px 22px;border-radius:999px;border:none;background:#ffcc4d;color:#3a2500;font-weight:600;cursor:pointer}
+#field{position:relative;width:100%;height:420px;margin-top:12px;background:black;overflow:hidden;border-radius:12px}
+#dark{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle 110px at var(--x,50%) var(--y,50%),transparent 0%,rgba(0,0,0,.95) 70%)}
+.item{position:absolute;font-size:22px;font-weight:bold;user-select:none;opacity:0;transition:opacity .15s}
+.item.visible{opacity:1}
+.item img{max-width:120px;max-height:80px}
+.selected{color:yellow}
+.matched{color:lime;opacity:1!important}
+#feedback{margin-top:10px;min-height:24px;text-align:center;font-size:18px}
+#end{display:none;text-align:center;margin-top:20px}
+#end img{max-width:320px}
+</style>
+</head>
+<body>
+<div class="screen">
+<div id="intro" class="overlay">
+  <div class="overlay-card">
+    <div style="font-size:40px">🎧</div>
+    <p>Luister eerst naar de uitleg</p>
+    <button id="startIntro">Start uitleg</button>
+  </div>
+</div>
+
+<div id="field"><div id="dark"></div></div>
+<div id="feedback"></div>
+
+<div id="end">
+  <img src="level3behaald.png"><br>
+  <button id="storyBtn">🎧 Luister naar het verhaal</button>
+  <div id="cookieResult" style="margin-top:10px;font-size:20px"></div>
+</div>
+
+<audio id="uitleg" src="audio3.mp4"></audio>
+<audio id="verhaal" src="audio5.mp4"></audio>
+</div>
+
+<script>
+const paren=[
+{id:"mist",word:"mist",img:"mist.png"},
+{id:"poep",word:"poep",img:"poep.png"},
+{id:"riem",word:"riem",img:"riem.png"},
+{id:"struik",word:"struik",img:"struik.png"},
+{id:"das",word:"das",img:"das.png"}
+];
+
+const field=document.getElementById("field");
+const dark=document.getElementById("dark");
+const feedback=document.getElementById("feedback");
+const end=document.getElementById("end");
+const intro=document.getElementById("intro");
+
+let items=[],eerste=null,gevonden=0,startTime=0;
+
+field.addEventListener("mousemove",e=>{
+ const r=field.getBoundingClientRect();
+ const x=e.clientX-r.left,y=e.clientY-r.top;
+ dark.style.setProperty("--x",x+"px");
+ dark.style.setProperty("--y",y+"px");
+ items.forEach(i=>{
+  const cx=i.offsetLeft+i.offsetWidth/2;
+  const cy=i.offsetTop+i.offsetHeight/2;
+  i.classList.toggle("visible",Math.hypot(cx-x,cy-y)<110);
+ });
+});
+
+function start(){
+ startTime=Date.now();
+ field.innerHTML='<div id="dark"></div>';
+ items=[];eerste=null;gevonden=0;
+ feedback.textContent="";
+ end.style.display="none";
+ const mix=[];
+ paren.forEach(p=>{
+  mix.push({type:"word",id:p.id,text:p.word});
+  mix.push({type:"img",id:p.id,img:p.img});
+ });
+ mix.sort(()=>Math.random()-0.5);
+ mix.forEach(d=>{
+  const el=document.createElement("div");
+  el.className="item";el.dataset.id=d.id;
+  if(d.type==="word")el.textContent=d.text;
+  else el.innerHTML=`<img src="${d.img}">`;
+  plaats(el);el.onclick=()=>klik(el);
+  field.appendChild(el);items.push(el);
+ });
+}
+
+function plaats(el){
+ let ok=false;
+ while(!ok){
+  const x=Math.random()*(field.clientWidth-130);
+  const y=Math.random()*(field.clientHeight-90);
+  ok=true;
+  items.forEach(i=>{
+   if(Math.abs(i.offsetLeft-x)<130&&Math.abs(i.offsetTop-y)<90)ok=false;
+  });
+  el.style.left=x+"px";el.style.top=y+"px";
+ }
+}
+
+function klik(el){
+ if(el.classList.contains("matched"))return;
+ el.classList.add("selected");
+ if(!eerste){eerste=el;return;}
+ if(eerste.dataset.id===el.dataset.id&&eerste!==el){
+  eerste.classList.add("matched");
+  el.classList.add("matched");
+  gevonden++;feedback.textContent="Goed!";
+ }else{
+  feedback.textContent="Niet goed.";
+  setTimeout(()=>{eerste.classList.remove("selected");el.classList.remove("selected")},600);
+ }
+ eerste=null;
+ if(gevonden===paren.length)setTimeout(einde,600);
+}
+
+function bereken(sec){
+ if(sec<=50)return 5;
+ if(sec<=65)return 4;
+ if(sec<=80)return 3;
+ if(sec<=90)return 2;
+ return 1;
+}
+
+function einde(){
+ field.style.display="none";
+ end.style.display="block";
+}
+
+document.getElementById("storyBtn").onclick=()=>{
+ const a=document.getElementById("verhaal");a.play();
+ a.onended=()=>{
+  const sec=(Date.now()-startTime)/1000;
+  const k=bereken(sec);
+
+  // Opslaan voor de kaart (totaal koekjes)
+  const prev = Number(localStorage.getItem('verhalenbos_level3_koekjes') || 0);
+  const bestForMap = Math.max(prev, k);
+  localStorage.setItem('verhalenbos_level3_koekjes', String(bestForMap));
+  document.getElementById("cookieResult").textContent="Je verdiende "+k+" 🍪";
+  localStorage.setItem("level3_bestCookies",Math.max(k,Number(localStorage.getItem("level3_bestCookies")||0)));
+  localStorage.setItem("level3_lastCookies",k);
+  if(k>=3)localStorage.setItem("verhalenbos_level3_completed_v2","true");
+  setTimeout(()=>location.href="index.html",1500);
+ };
+};
+
+document.getElementById("startIntro").onclick=()=>{
+ document.getElementById("uitleg").play();
+};
+document.getElementById("uitleg").onended=()=>{
+ intro.style.display="none";
+ start();
+};
+</script>
+</body>
+</html>

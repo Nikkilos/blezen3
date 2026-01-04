@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 4 – De fee en de blaadjes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #000;
+      color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .screen {
+      width: 950px;
+      max-width: 100%;
+      padding: 20px;
+      border-radius: 16px;
+      background: #111;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    button {
+      padding: 8px 20px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #ffcc4d;
+      color: #3a2500;
+      font-weight: 600;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      font-size: 15px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .small-btn {
+      padding: 6px 14px;
+      font-size: 13px;
+      background: #374151;
+      color: #e5e7eb;
+    }
+
+    .center-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* === SCÈNE === */
+
+    #scene {
+      position: relative;
+      height: 340px;
+      border-radius: 12px;
+      overflow: hidden;
+      background-image: url("boom.png");
+      background-size: cover;
+      background-position: center bottom;
+      border: 2px solid #374151;
+      margin-bottom: 10px;
+    }
+
+    #sky {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 8px;
+      bottom: 40%;
+      pointer-events: auto;
+    }
+
+    #sentence-bar {
+      margin-top: 6px;
+      border-radius: 10px;
+      background: linear-gradient(#3b2a1b, #24160c);
+      border: 2px solid #5e3b1f;
+      padding: 6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 40px;
+    }
+
+    #sentence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 90%;
+      justify-content: center;
+    }
+
+    .sentence-word {
+      padding: 6px 10px;
+      background: #f5f5dc;
+      border-radius: 8px;
+      color: #2b1a0c;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* === FEE & BLAADJES === */
+
+    #fairy {
+      position: absolute;
+      bottom: 10px;
+      right: 8%;
+      height: 150px;
+      transform: translateX(50%);
+      animation: floatFairy 3s ease-in-out infinite alternate;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .leaf-word {
+      position: absolute;
+      min-width: 120px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: url("blad.png");
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: center;
+      background-color: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1b130b;
+      user-select: none;
+      text-align: center;
+      opacity: 0.8; /* 20% doorzichtiger */
+      animation: floatLeaf 4s ease-in-out infinite alternate;
+      z-index: 1;
+      padding: 4px 10px;
+    }
+
+    .leaf-hit {
+      animation: fallLeaf 1.2s ease-in forwards;
+      cursor: default;
+    }
+
+    .leaf-wrong {
+      animation: shakeLeaf 0.35s ease-in-out;
+    }
+
+    .magic-beam {
+      position: absolute;
+      height: 4px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 0%, #fff8e1, #ffd54f, rgba(255,255,255,0));
+      box-shadow: 0 0 10px rgba(255, 236, 179, 0.9);
+      opacity: 0;
+      transform-origin: 0 50%;
+      animation: beamFlash 0.4s ease-out forwards;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    #feedback {
+      min-height: 22px;
+      text-align: center;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    .good { color: #a5d6a7; }
+    .bad  { color: #ef9a9a; }
+
+    /* === EINDSCHERM === */
+
+    #end-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    #end-screen.visible {
+      display: flex;
+    }
+
+    .end-card {
+      background: #111827;
+      border-radius: 16px;
+      padding: 20px;
+      max-width: 460px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    }
+
+    .end-card img {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    #story-info {
+      font-size: 0.9rem;
+      min-height: 18px;
+      color: #e5e7eb;
+    }
+
+    /* === ANIMATIES === */
+
+    @keyframes floatFairy {
+      0%   { transform: translate(50%, 0); }
+      100% { transform: translate(50%, -8px); }
+    }
+
+    @keyframes floatLeaf {
+      0%   { transform: translateY(0px) rotate(-2deg); }
+      100% { transform: translateY(8px) rotate(2deg); }
+    }
+
+    @keyframes fallLeaf {
+      0%   { transform: translateY(0) scale(1); opacity: 0.8; }
+      100% { transform: translateY(120px) scale(0.9); opacity: 0.1; }
+    }
+
+    @keyframes shakeLeaf {
+      0%   { transform: translateX(0); }
+      25%  { transform: translateX(-6px); }
+      50%  { transform: translateX(6px); }
+      75%  { transform: translateX(-4px); }
+      100% { transform: translateX(0); }
+    }
+
+    @keyframes beamFlash {
+      0%   { opacity: 0; }
+      20%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Verplichte uitleg-overlay -->
+  <div id="intro-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:999;">
+    <div style="width:min(560px,92vw);background:#111827;border-radius:16px;padding:20px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.7);">
+      <div style="font-size:44px;line-height:1;">🎧</div>
+      <p style="margin:10px 0 12px;font-weight:800;">Luister eerst naar de uitleg</p>
+      <button id="btn-play-intro" class="small-btn" style="font-size:16px;padding:10px 22px;border-radius:999px;">▶️ Start uitleg</button>
+      <p id="intro-status" style="margin:12px 0 0;opacity:0.85;font-size:13px;min-height:18px;"></p>
+    </div>
+  </div>
+
+  <div class="screen" id="game-wrapper" style="display:none;">
+    <h2 style="text-align:center;margin:4px 0 10px;">Punt 4 – De fee schiet de blaadjes weg</h2>
+
+    <div id="scene">
+      <div id="sky"></div>
+      <img id="fairy" src="fee.png" alt="Fee met toverstaf">
+    </div>
+
+    <div id="sentence-bar">
+      <div id="sentence"></div>
+    </div>
+
+    <p id="feedback"></p>
+  </div>
+
+  <!-- Eindscherm -->
+  <div id="end-screen">
+    <div class="end-card">
+      <img src="level4behaald.png" alt="Level 4 behaald">
+      <div id="cookie-result" style="display:none;margin:10px auto 0;gap:10px;align-items:center;justify-content:center;background:#0b0f19;border:1px solid #273043;border-radius:12px;padding:10px 14px;width:fit-content;"><span style="font-size:22px" aria-hidden="true">🍪</span><span style="font-weight:800;font-size:20px" id="cookie-count">0</span><span>hondenkoekjes</span></div>
+      <button id="story-btn">🎧 Luister naar het verhaal</button>
+      <div style="margin-top:14px;">
+        <button id="btn-to-map" style="display:none;" class="small-btn">⬅ Terug naar de kaart</button>
+      </div>
+      <p id="story-info"></p>
+    </div>
+  </div>
+
+  <script>
+    /* ---------------- ZINNEN (NIEUW) ----------------
+       Pas deze lijst aan als je andere zinnen wilt.
+    */
+    const woordbrijRounds = [
+     { solution: ["Wat","is","het","lekker","weer."] },
+      { solution: ["Ik","zie","een","kleine","wolk."] },
+      { solution: ["Boris","roept","Keesje."] },
+      { solution: ["Keesje","blaft","niet","terug."] },
+      { solution: ["Waar","is","Keesje","nou","heen?"] }
+    ];
+
+    const sceneEl    = document.getElementById("scene");
+    const skyEl      = document.getElementById("sky");
+    const fairyEl    = document.getElementById("fairy");
+    const sentenceEl = document.getElementById("sentence");
+    const feedbackEl = document.getElementById("feedback");
+
+    const gameWrapper = document.getElementById("game-wrapper");
+    const endScreen   = document.getElementById("end-screen");
+    const storyBtn    = document.getElementById("story-btn");
+    const tapFeedback = document.getElementById('tap-feedback');
+    const storyInfo   = document.getElementById("story-info");
+    
+    
+
+    const storyAudio  = new Audio("audio7.mp4");
+
+    let audioCtx = null;
+    let roundIndex = 0;
+    let expectedPos = 0;
+    let wrongClicks = 0;
+    let cookiesThisRun = 0;
+
+    function calcCookiesFromWrongClicks(wrong){
+      // 0-3 foutjes  = 5 koekjes
+      // 4-6 foutjes  = 4 koekjes
+      // 7-9 foutjes  = 3 koekjes
+      // 10-12 foutjes = 2 koekjes
+      // >12 foutjes  = 1 koekje
+      if (wrong <= 3) return 5;
+      if (wrong <= 6) return 4;
+      if (wrong <= 9) return 3;
+      if (wrong <= 12) return 2;
+      return 1;
+    }
+
+    let clickLocked = false;   // voorkomt dubbele/foute clicks omdat je te snel bent
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function speak(text) {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "nl-NL";
+      window.speechSynthesis.speak(u);
+    }
+
+    function playPew() {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+
+      const ctx = audioCtx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+
+      osc.type = "square";
+      osc.frequency.setValueAtTime(1000, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+
+    function makeBeam(targetEl) {
+      if (!fairyEl) return;
+      const sceneRect = sceneEl.getBoundingClientRect();
+      const fairyRect = fairyEl.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+
+      const startX = fairyRect.left + fairyRect.width * 0.2;
+      const startY = fairyRect.top  + fairyRect.height * 0.3;
+
+      const endX = targetRect.left + targetRect.width / 2;
+      const endY = targetRect.top  + targetRect.height / 2;
+
+      const x1 = startX - sceneRect.left;
+      const y1 = startY - sceneRect.top;
+      const x2 = endX   - sceneRect.left;
+      const y2 = endY   - sceneRect.top;
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      const beam = document.createElement("div");
+      beam.className = "magic-beam";
+      beam.style.left = x1 + "px";
+      beam.style.top  = (y1 - 2) + "px";
+      beam.style.width = distance + "px";
+      beam.style.transform = "rotate(" + angleDeg + "deg)";
+
+      sceneEl.appendChild(beam);
+      setTimeout(() => beam.remove(), 450);
+    }
+
+    function clearSentence() {
+      sentenceEl.innerHTML = "";
+    }
+
+    function clearSky() {
+      skyEl.innerHTML = "";
+    }
+
+    function addWordToSentence(word) {
+      const span = document.createElement("div");
+      span.className = "sentence-word";
+      span.textContent = word;
+      sentenceEl.appendChild(span);
+    }
+
+    function placeLeavesForRound(round) {
+      clearSky();
+      clearSentence();
+      feedbackEl.textContent = "";
+      feedbackEl.className = "";
+      expectedPos = 0;
+      clickLocked = false;
+
+      const shuffled = shuffle(round.solution);
+      const containerWidth  = skyEl.clientWidth  || sceneEl.clientWidth;
+      const containerHeight = skyEl.clientHeight || 150;
+
+      const placed = [];
+      const leafW = 130;
+      const leafH = 70;
+      const margin = 10;
+
+      function overlaps(x, y) {
+        return placed.some(p =>
+          Math.abs(p.x - x) < (leafW + margin) &&
+          Math.abs(p.y - y) < (leafH + margin)
+        );
+      }
+
+      shuffled.forEach(word => {
+        const leaf = document.createElement("div");
+        leaf.className = "leaf-word";
+        leaf.textContent = word;
+        leaf.dataset.word = word;
+
+        let tries = 0;
+        let x, y;
+        do {
+          x = Math.random() * (containerWidth  - leafW - 20) + 10;
+          y = Math.random() * (containerHeight - leafH - 20) + 5;
+          tries++;
+        } while (overlaps(x, y) && tries < 200);
+
+        placed.push({x, y});
+        leaf.style.left = x + "px";
+        leaf.style.top  = y + "px";
+
+        leaf.addEventListener("click", () => handleLeafClick(leaf));
+        skyEl.appendChild(leaf);
+      });
+    }
+
+    function handleLeafClick(leaf) {
+      if (clickLocked) return; // voorkomt te snelle dubbele clicks
+      const round = woordbrijRounds[roundIndex];
+      const correctWord = round.solution[expectedPos];
+      const chosen = leaf.dataset.word;
+
+      if (chosen !== correctWord) {
+        clickLocked = true;
+        wrongClicks++;
+        leaf.classList.add("leaf-wrong");
+        feedbackEl.textContent = "Niet dat blaadje. Luister naar de zin en kies het volgende woord.";
+        feedbackEl.className = "bad";
+        setTimeout(() => {
+          leaf.classList.remove("leaf-wrong");
+          clickLocked = false;
+        }, 350);
+        return;
+      }
+
+      // Juist blaadje
+      clickLocked = true;
+      playPew();
+      makeBeam(leaf);
+      feedbackEl.textContent = "";
+      feedbackEl.className = "";
+
+      leaf.classList.add("leaf-hit");
+      leaf.style.cursor = "default";
+
+      setTimeout(() => {
+        addWordToSentence(chosen);
+        leaf.remove();
+        expectedPos++;
+
+        if (expectedPos >= round.solution.length) {
+          feedbackEl.textContent = "Goed! De zin klopt.";
+          feedbackEl.className = "good";
+
+          if (roundIndex === woordbrijRounds.length - 1) {
+            // laatste zin klaar → eindscherm
+            setTimeout(showEndScreen, 900);
+          } else {
+            roundIndex++;
+            setTimeout(() => {
+              placeLeavesForRound(woordbrijRounds[roundIndex]);
+            }, 900);
+          }
+        } else {
+          clickLocked = false;
+        }
+      }, 700);
+    }
+
+    function flashTryAgain(){
+      if(!tapFeedback) return;
+      tapFeedback.textContent = 'Probeer nog eens.';
+      tapFeedback.style.color = '#ef9a9a';
+      clearTimeout(flashTryAgain._t);
+      flashTryAgain._t = setTimeout(()=>{ if(tapFeedback) tapFeedback.textContent=''; }, 900);
+    }
+
+    function showEndScreen() {
+      cookiesThisRun = calcCookiesFromWrongClicks(wrongClicks);
+      gameWrapper.style.display = "none";
+      endScreen.classList.add("visible");
+      storyInfo.textContent = "";
+      storyBtn.disabled = false;
+    }
+
+    /* ------- EINDE: VERHAAL + TERUG NAAR KAART ------- */
+
+    storyBtn.addEventListener("click", () => {
+      storyBtn.disabled = true;
+      storyInfo.textContent = "Het verhaal wordt afgespeeld...";
+      storyAudio.currentTime = 0;
+      storyAudio.play().catch(() => {
+        storyInfo.textContent = "Het lukt niet om het verhaal af te spelen.";
+        storyBtn.disabled = false;
+      });
+    });
+
+    storyAudio.addEventListener("ended", () => {
+      const cookieCountEl = document.getElementById("cookie-count");
+      const cookieBox = document.getElementById("cookie-result");
+      const toMapBtn = document.getElementById("btn-to-map");
+
+      const c = Number(cookiesThisRun || 0);
+      if (cookieCountEl) cookieCountEl.textContent = String(c);
+      if (cookieBox) cookieBox.style.display = "flex";
+
+      // Opslaan: beste score voor dit level
+      const prevBest = Number(localStorage.getItem("level4_bestCookies") || 0);
+      if (c > prevBest) localStorage.setItem("level4_bestCookies", String(c));
+      localStorage.setItem("level4_lastCookies", String(c));
+
+      // Opslaan voor de kaart / totaal
+      const prevMap = Number(localStorage.getItem("verhalenbos_level4_koekjes") || 0);
+      localStorage.setItem("verhalenbos_level4_koekjes", String(Math.max(prevMap, c)));
+
+      // Alleen 'behaald' als minimaal 3 koekjes
+      if (c >= 3) {
+        localStorage.setItem("verhalenbos_level4_completed_v2", "true");
+        storyInfo.textContent = "Goed gedaan! Je hebt dit level gehaald.";
+      } else {
+        localStorage.removeItem("verhalenbos_level4_completed_v2");
+        storyInfo.textContent = "Nog niet genoeg koekjes. Probeer het nog eens!";
+      }
+
+      localStorage.setItem("verhalenbos_returnFromLevel", "true");
+
+      if (toMapBtn) {
+        toMapBtn.style.display = "inline-block";
+        toMapBtn.onclick = () => { window.location.href = "index.html"; };
+      }
+      storyBtn.disabled = false;
+      storyBtn.textContent = "🎧 Verhaal opnieuw luisteren";
+    });
+
+    /* ------- UITLEG & TERUG ------- */
+
+    });
+
+    window.location.href = "index.html";
+    });
+
+    /* ------- START ------- */
+
+    window.addEventListener("load", () => {
+      roundIndex = 0;
+      wrongClicks = 0;
+      placeLeavesForRound(woordbrijRounds[roundIndex]);
+    });
+  
+    // ------- VERPLICHTE UITLEG (bij openen) -------
+    const introOverlay = document.getElementById("intro-overlay");
+    const introBtn = document.getElementById("btn-play-intro");
+    const introStatus = document.getElementById("intro-status");
+
+    function speakIntro(){
+      if (!("speechSynthesis" in window)) {
+        // Geen TTS: laat gewoon starten
+        introOverlay.style.display = "none";
+        gameWrapper.style.display = "block";
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(
+        "In de lucht hangen blaadjes met woorden. Klik steeds op het volgende woord dat in de zin hoort. Zo maak je de hele zin, woord voor woord."
+      );
+      u.lang = "nl-NL";
+      u.onend = () => {
+        introOverlay.style.display = "none";
+        gameWrapper.style.display = "block";
+      };
+      introStatus.textContent = "Uitleg wordt afgespeeld...";
+      introBtn.disabled = true;
+      window.speechSynthesis.speak(u);
+    }
+
+    introBtn.addEventListener("click", speakIntro);
+
+    // Probeer automatisch te starten (werkt soms pas na een klik; daarom blijft de knop)
+    window.addEventListener("load", () => {
+      try { speakIntro(); } catch(e) {}
+    });
+
+</script>
+</body>
+</html>
+

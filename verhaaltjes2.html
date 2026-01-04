@@ -1,0 +1,2628 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Verhalenbos – Avatar, onderwerp & spellen</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    :root {
+      --cursor-x: 50%;
+      --cursor-y: 50%;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #1b1b1b;
+      color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .screen {
+      width: 1000px;
+      max-width: 100%;
+      padding: 24px;
+      box-sizing: border-box;
+      border-radius: 16px;
+      background: #2a2a2a;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .center-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 8px;
+      gap: 12px;
+    }
+
+    button {
+      font-size: 16px;
+      padding: 10px 24px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #ffcc4d;
+      color: #3a2500;
+      font-weight: 600;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: transform 0.1s ease, box-shadow 0.1s ease,
+                  opacity 0.15s ease;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.6);
+    }
+
+    .explain-btn {
+      padding: 6px 16px;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .btn-small {
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: #e5e7eb;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, transform 0.05s, box-shadow 0.1s, border-color 0.15s;
+    }
+
+    .btn-small:hover {
+      background: #1f2937;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    }
+
+    .btn-small:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    /* Kaarten (onderwerp) */
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .card {
+      border-radius: 12px;
+      background: #3a3a3a;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform 0.15s ease, border-color 0.15s ease,
+                  box-shadow 0.15s ease;
+      user-select: none;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+    }
+
+    .card.selected {
+      border-color: #ffcc4d;
+      box-shadow: 0 0 12px rgba(255,204,77,0.7);
+    }
+
+    .card-emoji {
+      font-size: 40px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .card-title {
+      font-weight: 600;
+    }
+
+    /* NIEUWE AVATAR LAY-OUT */
+
+    .avatar-row {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin: 24px 0;
+    }
+
+    .avatar-choice {
+      width: 140px;
+      height: auto;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, outline 0.15s ease;
+      outline: none;
+      display: block;
+    }
+
+    .avatar-choice:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+    }
+
+    .avatar-choice.selected {
+      transform: scale(1.03);
+      box-shadow: 0 0 12px rgba(255,204,77,0.7);
+      outline: 3px solid #ffcc4d;
+    }
+
+    /* Spel / kaart scherm */
+
+    #game-screen {
+      display: none;
+    }
+
+    .map-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .hud {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 15px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hud-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hud-avatar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-avatar-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #3a3a3a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .map-container {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      border-radius: 12px;
+      border: 3px solid #f5deb3;
+      background: #000;
+    }
+
+    #map-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 12px;
+    }
+
+    #map {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .point {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #f5deb3;
+      border: 2px solid #5b3b10;
+      box-shadow: 0 0 6px rgba(0,0,0,0.7);
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+    }
+
+    .point.locked {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .point:hover:not(.locked) {
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    .point.completed {
+      background: #4caf50;
+      border-color: #b2ffb2;
+    }
+
+    .avatar-on-map {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      transform: translate(-50%, -100%);
+      pointer-events: none;
+      text-shadow: 0 0 6px rgba(0,0,0,0.8);
+      transition: left 0.8s linear, top 0.8s linear;
+      overflow: hidden;
+    }
+
+    /* NIEUW: avatar afbeelding in de cirkel op de kaart */
+    .avatar-on-map img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Overlay met levels */
+
+    #level-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #level-overlay.active {
+      display: flex;
+    }
+
+    #level-panel {
+      width: 90%;
+      max-width: 800px;
+      max-height: 90%;
+      overflow-y: auto;
+      background: #333;
+      border-radius: 12px;
+      padding: 16px 20px 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    }
+
+    #level-panel h2 {
+      margin-top: 0;
+      margin-bottom: 4px;
+      font-size: 20px;
+    }
+
+    #level-status {
+      font-size: 14px;
+      color: #ccc;
+      margin-bottom: 4px;
+    }
+
+    #level-stars-label {
+      font-size: 14px;
+      color: #ffd54f;
+      margin-bottom: 8px;
+    }
+
+    #back-to-map {
+      margin-bottom: 12px;
+    }
+
+    .level {
+      margin-top: 8px;
+    }
+
+    /* Spel 1: zinnen bij plaatjes */
+
+    #q-image {
+      max-width: 260px;
+      border-radius: 10px;
+      display: block;
+      margin: 0 auto 12px;
+      background: #1f1f1f;
+      padding: 6px;
+    }
+
+    #q-sentences {
+      max-width: 520px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sentence-btn {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #444;
+      color: #f5f5f5;
+      border: 1px solid #666;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .sentence-btn:hover {
+      background: #555;
+    }
+
+    #spel1-feedback {
+      margin-top: 10px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .good { color: #a5d6a7; }
+    .bad  { color: #ef9a9a; }
+
+    /* Spel 2: memory */
+
+    #memory-grid {
+      max-width: 700px;
+      margin: 12px auto;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)); /* 4 x 4 */
+      gap: 10px;
+    }
+
+    .memory-card {
+      position: relative;
+      background: #444;
+      border-radius: 10px;
+      padding: 8px;
+      height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 2px solid #666;
+      text-align: center;
+      font-size: 14px;
+      user-select: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+
+    .memory-card img {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+    }
+
+    .memory-card.flipped {
+      background: #222;
+    }
+
+    .memory-card.matched {
+      visibility: hidden;
+    }
+
+    #memory-feedback {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    /* Spel 3: Zoeklicht memory */
+
+    .zoeklicht-root {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      overflow: hidden;
+      color: #e5e7eb;
+      border-radius: 14px;
+      border: 1px solid #111827;
+      background: #020617;
+    }
+
+    .zoeklicht-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(56,189,248,0.35), transparent 60%),
+        radial-gradient(circle at 85% 10%, rgba(94,234,212,0.25), transparent 60%),
+        linear-gradient(180deg, #020617 0%, #020617 40%, #030712 100%);
+      z-index: 0;
+    }
+
+    .zoeklicht-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      background:
+        radial-gradient(circle at var(--cursor-x) var(--cursor-y),
+          transparent 70px,
+          rgba(0,0,0,1) 110px);
+      pointer-events: none;
+      transition: background-position 0.05s;
+    }
+
+    .zoeklicht-content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      padding: 12px 16px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .spot-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .spot-badge {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15,118,110,0.4);
+      border: 1px solid rgba(34,197,94,0.7);
+      color: #a7f3d0;
+    }
+
+    .spot-instructions {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+
+    .spot-instructions span {
+      color: #facc15;
+    }
+
+    .spot-field {
+      position: relative;
+      flex: 1;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      background: radial-gradient(circle at 10% 0%, #111827, #020617 80%);
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .spot-feedback-row {
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .spot-feedback-text {
+      font-size: 0.85rem;
+      min-height: 20px;
+    }
+
+    .spot-feedback-text.ok {
+      color: #4ade80;
+    }
+
+    .spot-feedback-text.error {
+      color: #fb7185;
+    }
+
+    .spot-word {
+      position: absolute;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e5e7eb;
+      cursor: pointer;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+      transition: transform 0.08s, text-shadow 0.08s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .spot-word:hover {
+      transform: scale(1.05);
+      text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+    }
+
+    .spot-picture {
+      position: absolute;
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.08s;
+    }
+
+    .spot-picture img {
+      display: block;
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+      background: #020617;
+    }
+
+    .spot-picture:hover img {
+      transform: scale(1.06);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.9);
+    }
+
+    .spot-selected-word {
+      color: #facc15;
+      text-shadow: 0 0 10px rgba(250,204,21,0.9);
+    }
+
+    .spot-selected-picture img {
+      box-shadow: 0 0 16px rgba(250,204,21,0.9);
+    }
+
+    .spot-matched {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+
+    .spot-wrong-word {
+      color: #fb7185;
+    }
+
+    .spot-wrong-picture img {
+      box-shadow: 0 0 14px rgba(248,113,113,0.9);
+    }
+
+    /* Spel 4: bubble shooter woordbrij */
+
+    #woordbrij-scene {
+      position: relative;
+      height: 320px;
+      border-radius: 12px;
+      overflow: hidden;
+      background-image: url("boom.png");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      margin-bottom: 8px;
+      border: 2px solid #556;
+    }
+
+    #woordbrij-sky {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 10px;
+      height: 60%;
+    }
+
+    #woordbrij-ground {
+      margin-top: 6px;
+      border-radius: 10px;
+      background: linear-gradient(#3b2a1b, #24160c);
+      border: 2px solid #5e3b1f;
+      padding: 6px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #woordbrij-sentence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 90%;
+      justify-content: center;
+    }
+
+    .woordbrij-ground-word {
+      padding: 6px 10px;
+      background: #f5f5dc;
+      border-radius: 8px;
+      color: #2b1a0c;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .leaf-word {
+      position: absolute;
+      padding: 16px 24px;
+      min-width: 160px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: url("blad.png");
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: center;
+      background-color: transparent;
+      color: #2b1a0c;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      font-weight: 600;
+      user-select: none;
+      text-align: center;
+      animation: floatLeaf 4s ease-in-out infinite alternate;
+      white-space: nowrap;
+    }
+
+    .leaf-word:hover {
+      filter: brightness(1.1);
+    }
+
+    .leaf-hit {
+      animation: fallLeaf 1.2s ease-in forwards;
+      cursor: default;
+    }
+
+    .leaf-wrong {
+      animation: shakeLeaf 0.35s ease-in-out;
+    }
+
+    #fairy {
+      position: absolute;
+      bottom: 10px;
+      left: 78%;
+      transform: translateX(-50%);
+      height: 160px;
+      animation: floatFairy 3s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    #woordbrij-feedback {
+      margin-top: 6px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .magic-beam {
+      position: absolute;
+      height: 4px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 0%, #fff8e1, #ffd54f, rgba(255,255,255,0));
+      box-shadow: 0 0 8px rgba(255, 236, 179, 0.9);
+      opacity: 0;
+      transform-origin: 0 50%;
+      animation: beamFlash 0.4s ease-out forwards;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    @keyframes floatLeaf {
+      0%   { transform: translateY(0px) rotate(-2deg); }
+      100% { transform: translateY(8px) rotate(2deg); }
+    }
+
+    @keyframes fallLeaf {
+      0%   { transform: translateY(0)   scale(1);   opacity: 1; }
+      100% { transform: translateY(120px) scale(0.9); opacity: 0.2; }
+    }
+
+    @keyframes shakeLeaf {
+      0%   { transform: translateX(0); }
+      25%  { transform: translateX(-5px); }
+      50%  { transform: translateX(5px); }
+      75%  { transform: translateX(-3px); }
+      100% { transform: translateX(0); }
+    }
+
+    @keyframes floatFairy {
+      0%   { transform: translate(-50%, 0); }
+      100% { transform: translate(-50%, -6px); }
+    }
+
+    @keyframes beamFlash {
+      0%   { opacity: 0; }
+      20%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .good { color: #a5d6a7; }
+    .bad  { color: #ef9a9a; }
+
+    /* Spel 6: Platform Zinnen Sprong */
+
+    #level6 h3 {
+      margin-top: 0;
+      margin-bottom: 4px;
+      font-size: 1rem;
+    }
+
+    .plat-game-container {
+      border-radius: 16px;
+      border: 1px solid #1f2937;
+      background: #000;
+      padding: 10px 14px 14px;
+      margin-top: 8px;
+    }
+
+    .plat-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .plat-game-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .plat-badge {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(250,204,21,0.08);
+      border: 1px solid #facc15;
+      color: #facc15;
+    }
+
+    .plat-instruction {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+
+    .plat-instruction span {
+      color: #bfdbfe;
+    }
+
+    .plat-game-field {
+      position: relative;
+      height: 380px;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      overflow: hidden;
+      margin-bottom: 10px;
+      background: #000 url("wandelguy.png") center center no-repeat;
+      background-size: contain;
+    }
+
+    .plat-platform {
+      position: absolute;
+      min-width: 90px;
+      height: 44px;
+      padding: 3px 6px;
+      border-radius: 6px;
+      background: url("brick.png") center/cover no-repeat;
+      font-size: 0.8rem;
+      text-align: center;
+      color: #f9fafb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+      white-space: nowrap;
+    }
+
+    .plat-platform.collected {
+      opacity: 0.35;
+      box-shadow: 0 0 16px rgba(34,197,94,0.9);
+    }
+
+    .plat-platform.wrong {
+      box-shadow: 0 0 18px rgba(248,113,113,0.9);
+      filter: hue-rotate(-20deg) brightness(0.8);
+    }
+
+    .plat-sparkle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fef9c3 0%, #facc15 40%, #ea580c 100%);
+      pointer-events: none;
+      opacity: 0;
+      animation: sparklePop 0.6s ease-out forwards;
+      box-shadow: 0 0 10px rgba(250,204,21,0.9);
+    }
+
+    .plat-ground-strip {
+      position: absolute;
+      height: 32px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.4), #022c22);
+      border-top: 2px solid rgba(16,185,129,0.6);
+    }
+
+    .plat-player {
+      position: absolute;
+      width: 80px;
+      height: 110px;
+      bottom: 32px;
+      left: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .plat-player img {
+      width: 80px;
+      height: 110px;
+      object-fit: contain;
+      image-rendering: crisp-edges;
+    }
+
+    .plat-player.jump {
+      animation: jumpArc 0.55s ease-out;
+    }
+
+    @keyframes sparklePop {
+      0%   { transform: scale(0.3); opacity: 0; }
+      20%  { transform: scale(1);   opacity: 1; }
+      100% { transform: scale(0.1) translateY(-20px); opacity: 0; }
+    }
+
+    @keyframes jumpArc {
+      0%   { transform: translateY(0); }
+      40%  { transform: translateY(-130px); }
+      80%  { transform: translateY(-20px); }
+      100% { transform: translateY(0); }
+    }
+
+    .plat-sentence-bar {
+      border-radius: 999px;
+      background: #020617;
+      border: 1px solid #1f2937;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .plat-sentence-label {
+      color: #9ca3af;
+      margin-right: 4px;
+    }
+
+    .plat-sentence-chosen {
+      color: #e5e7eb;
+      min-height: 1.2em;
+    }
+
+    .plat-sentence-progress {
+      margin-top: 2px;
+      font-size: 0.85rem;
+      color: #a5b4fc;
+      width: 100%;
+    }
+
+    .plat-controls-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .plat-control-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .plat-btn-control,
+    .plat-btn-next,
+    .plat-btn-check {
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: #e5e7eb;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s, transform 0.05s, box-shadow 0.1s;
+    }
+
+    .plat-btn-control:hover,
+    .plat-btn-next:hover,
+    .plat-btn-check:hover {
+      background: #1f2937;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    }
+
+    .plat-btn-control:active,
+    .plat-btn-next:active,
+    .plat-btn-check:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    .plat-btn-next {
+      border-color: #facc15;
+      background: #fbbf24;
+      color: #1f2933;
+    }
+
+    .plat-btn-next.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      box-shadow: none;
+    }
+
+    .plat-feedback {
+      font-size: 0.9rem;
+      min-height: 20px;
+    }
+
+    .plat-feedback.ok {
+      color: #4ade80;
+    }
+
+    .plat-feedback.error {
+      color: #fb7185;
+    }
+
+    @media (max-width: 768px) {
+      .plat-game-field {
+        height: 320px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SCHERM 1: AVATAR KEUZE -->
+  <div class="screen" id="avatar-screen">
+    <h1>Kies je avatar</h1>
+    <p style="text-align:center; max-width: 600px; margin: 0 auto;">
+      Klik op een figuur om jouw avatar te kiezen en druk daarna op
+      <strong>Verder</strong>.
+    </p>
+
+    <div class="avatar-row" id="avatar-grid">
+      <img src="persoon1.png" alt="Avatar 1" class="avatar-choice" data-avatar="avatar1">
+      <img src="persoon2.png" alt="Avatar 2" class="avatar-choice" data-avatar="avatar2">
+      <img src="persoon3.png" alt="Avatar 3" class="avatar-choice" data-avatar="avatar3">
+    </div>
+
+    <div class="center-row">
+      <button id="avatar-next" disabled>Verder</button>
+    </div>
+  </div>
+
+  <!-- SCHERM 2: ONDERWERP KEUZE -->
+  <div class="screen" id="topic-screen" style="display:none;">
+    <h1>Kies je avontuur</h1>
+    <p style="text-align:center; max-width: 650px; margin: 0 auto;">
+      In welke wereld wil jij verhalen lezen en spellen spelen?
+    </p>
+
+    <div class="card-grid" id="topic-grid">
+      <div class="card" data-topic="weggelopen-hond">
+        <span class="card-emoji">🐕‍🦺</span>
+        <div class="card-title">De weggelopen hond</div>
+      </div>
+      <div class="card" data-topic="verdwaalde-jongen">
+        <span class="card-emoji">🧒</span>
+        <div class="card-title">De verdwaalde jongen</div>
+      </div>
+      <div class="card" data-topic="schattenjacht">
+        <span class="card-emoji">🗺️</span>
+        <div class="card-title">Zoektocht naar de schat</div>
+      </div>
+      <div class="card" data-topic="natuurbingo">
+        <span class="card-emoji">🌳</span>
+        <div class="card-title">Natuurbingo wandeling</div>
+      </div>
+    </div>
+
+    <div class="center-row">
+      <button id="topic-back">Terug</button>
+      <button id="topic-start" disabled>Ga naar het bos</button>
+    </div>
+  </div>
+
+  <!-- SCHERM 3: KAART + OVERLAY -->
+  <div class="screen" id="game-screen">
+    <div class="map-wrapper">
+      <div class="hud">
+        <div class="hud-left">
+          <div class="hud-avatar">
+            <div class="hud-avatar-icon" id="hud-avatar-icon">?</div>
+            <span id="hud-avatar-label">Avatar: -</span>
+          </div>
+          <div id="hud-topic-label">Onderwerp: -</div>
+        </div>
+        <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+          <span id="hud-progress">Punt 1 is beschikbaar</span>
+          <span id="hud-score">Sterren totaal: 0 ⭐</span>
+        </div>
+      </div>
+
+      <div class="map-container">
+        <img id="map-image" src="bospad.png" alt="Kaart van het bos">
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <!-- Overlay met levels -->
+    <div id="level-overlay">
+      <div id="level-panel">
+        <button id="back-to-map">Terug naar kaart</button>
+        <h2 id="level-title"></h2>
+        <div id="level-status"></div>
+        <div id="level-stars-label"></div>
+
+        <!-- SPEL 1: zinnen bij plaatjes (Punt 1) -->
+        <div id="level1" class="level">
+          <button id="explain-level1" class="explain-btn">🎧 Leg het spel uit</button>
+          <img id="q-image" src="" alt="vraag" />
+          <div id="q-sentences"></div>
+          <p id="spel1-feedback"></p>
+        </div>
+
+        <!-- SPEL 2: memory (Punt 2) -->
+        <div id="level2" class="level" style="display:none;">
+          <button id="explain-level2" class="explain-btn">🎧 Leg het spel uit</button>
+          <div id="memory-grid"></div>
+          <p id="memory-feedback"></p>
+        </div>
+
+        <!-- SPEL 3: zoeklicht memory (Punt 3) -->
+        <div id="level3" class="level" style="display:none;">
+          <button id="explain-level3" class="explain-btn">🎧 Leg het spel uit</button>
+          <div class="zoeklicht-root" id="spotRoot">
+            <div class="zoeklicht-bg"></div>
+            <div class="zoeklicht-overlay" id="spotOverlay"></div>
+            <div class="zoeklicht-content">
+              <div class="spot-top-row">
+                <div>Zoeklicht Memory – Weggelopen hond</div>
+                <div class="spot-badge">Zoek alle hondensporen</div>
+              </div>
+              <div class="spot-instructions">
+                Beweeg je <span>zaklamp</span> (muis of vinger) over het veld.
+                Klik eerst op een <strong>woord</strong> en daarna op het <strong>plaatje</strong> dat erbij hoort.
+              </div>
+              <div class="spot-field" id="spotField"></div>
+              <div class="spot-feedback-row">
+                <div class="spot-feedback-text" id="spotFeedback"></div>
+                <button class="btn-small" id="spotReset">🔄 Opnieuw spelen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SPEL 4: bubble shooter woordbrij (Punt 4) -->
+        <div id="level4" class="level" style="display:none;">
+          <button id="explain-level4" class="explain-btn">🎙️ Leg het spel uit</button>
+          <div id="woordbrij-scene">
+            <div id="woordbrij-sky"></div>
+            <img id="fairy" src="fee.png" alt="Fee met toverstaf">
+          </div>
+          <div id="woordbrij-ground">
+            <div id="woordbrij-sentence"></div>
+          </div>
+          <p id="woordbrij-feedback"></p>
+        </div>
+
+        <!-- SPEL 6: Platform Zinnen Sprong (Punt 6) -->
+        <div id="level6" class="level" style="display:none;">
+          <button id="explain-level6" class="explain-btn">🎙️ Leg het spel uit</button>
+          <h3>Platform Zinnen Sprong – Weggelopen hond</h3>
+
+          <div class="plat-game-container">
+            <div class="plat-top-row">
+              <div class="plat-game-title">Platform-sprong-game – Hond op zoek</div>
+              <div class="plat-badge" id="platLevelBadge">Level 1 / 4</div>
+            </div>
+
+            <div class="plat-game-field" id="platGameField">
+              <div class="plat-ground-strip"></div>
+              <div class="plat-player" id="platPlayer">
+                <img id="platPlayerSprite" src="wandelen1.png" alt="poppetje">
+              </div>
+              <!-- platforms via JS -->
+            </div>
+
+            <div class="plat-sentence-bar">
+              <div class="plat-sentence-label">Jouw zin:</div>
+              <div class="plat-sentence-chosen" id="platSentenceChosen"></div>
+              <div class="plat-sentence-progress" id="platSentenceProgress"></div>
+            </div>
+
+            <div class="plat-controls-row">
+              <div class="plat-control-group">
+                <button class="plat-btn-control" id="platBtnLeft">◀️ Links</button>
+                <button class="plat-btn-control" id="platBtnRight">▶️ Rechts</button>
+                <button class="plat-btn-control" id="platBtnJump">🪄 Spring!</button>
+              </div>
+              <div class="plat-control-group">
+                <button class="plat-btn-check" id="platBtnCheck">✔ Na laten kijken</button>
+                <button class="plat-btn-next disabled" id="platBtnNextLevel">
+                  Volgende zin ➜
+                </button>
+              </div>
+            </div>
+            <div class="plat-feedback" id="platFeedback"></div>
+          </div>
+        </div>
+
+        <!-- Placeholder voor andere punten -->
+        <div id="level-placeholder" class="level" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* --------- DATA --------- */
+
+    const points = [
+      {"name":"Punt 1","xPercent":20.22732066459396,"yPercent":49.21536285442943},
+      {"name":"Punt 2","xPercent":32.05813994882939,"yPercent":31.06350583833106},
+      {"name":"Punt 3","xPercent":33.88346635268286,"yPercent":64.44669794350284},
+      {"name":"Punt 4","xPercent":52.94798657070796,"yPercent":12.526302456115342},
+      {"name":"Punt 5","xPercent":52.67756784421115,"yPercent":46.599061994713395},
+      {"name":"Punt 6","xPercent":54.232475521567814,"yPercent":83.51121908026603},
+      {"name":"Punt 7","xPercent":71.33645997249104,"yPercent":27.9401707851716},
+      {"name":"Punt 8","xPercent":72.68855360497508,"yPercent":66.77906037827593},
+      {"name":"Punt 9","xPercent":90.87421296188555,"yPercent":48.525796339741255},
+      {"name":"Schatkist","xPercent":74.04064723745914,"yPercent":90.6097106508073}
+    ];
+
+    const adjacency = {
+      "Punt 1": ["Punt 2","Punt 3"],
+      "Punt 2": ["Punt 1","Punt 4","Punt 5"],
+      "Punt 3": ["Punt 1","Punt 5","Punt 6"],
+      "Punt 4": ["Punt 2","Punt 5","Punt 7"],
+      "Punt 5": ["Punt 2","Punt 3","Punt 4","Punt 6","Punt 7","Punt 8"],
+      "Punt 6": ["Punt 3","Punt 5","Punt 8"],
+      "Punt 7": ["Punt 4","Punt 5","Punt 9"],
+      "Punt 8": ["Punt 5","Punt 6","Punt 9","Schatkist"],
+      "Punt 9": ["Punt 7","Punt 8","Schatkist"],
+      "Schatkist": ["Punt 8","Punt 9"]
+    };
+
+    const progression = {
+      "Punt 1": ["Punt 2","Punt 3"],
+      "Punt 2": ["Punt 4","Punt 5"],
+      "Punt 3": ["Punt 5","Punt 6"],
+      "Punt 4": ["Punt 7"],
+      "Punt 5": ["Punt 7","Punt 8"],
+      "Punt 6": ["Punt 8"],
+      "Punt 7": ["Punt 9"],
+      "Punt 8": ["Punt 9"],
+      "Punt 9": ["Schatkist"]
+    };
+
+    /* Avatars – UITGEBREID MET IMG */
+    const avatarData = {
+      avatar1: { label: "Avatar 1", emoji: "🧒", img: "persoon1.png" },
+      avatar2: { label: "Avatar 2", emoji: "👦", img: "persoon2.png" },
+      avatar3: { label: "Avatar 3", emoji: "👧", img: "persoon3.png" }
+    };
+
+    /* Verhaalwerelden */
+    const topicData = {
+      "weggelopen-hond":   { label: "De weggelopen hond",   emoji: "🐕‍🦺" },
+      "verdwaalde-jongen": { label: "De verdwaalde jongen", emoji: "🧒" },
+      "schattenjacht":     { label: "Zoektocht naar de schat", emoji: "🗺️" },
+      "natuurbingo":       { label: "Natuurbingo wandeling", emoji: "🌳" }
+    };
+
+    /* SPEL 1 – Zinnen bij plaatjes (weggelopen hond, Boris & Keesje) */
+    const questionsByTopic = {
+      "weggelopen-hond": [
+        {
+          image: "lopen.png",
+          alt: "Boris loopt met Keesje het bos in",
+          correct: "Boris loopt met Keesje het bos in.",
+          options: [
+            "Boris loopt met Keesje het bos in.",
+            "Keesje ligt te slapen in zijn mand.",
+            "Boris gooit een bal in de tuin."
+          ]
+        },
+        {
+          image: "snuffelen.png",
+          alt: "Keesje snuffelt aan de bomen",
+          correct: "Keesje snuffelt aan de bomen.",
+          options: [
+            "Keesje snuffelt aan de bomen.",
+            "Keesje drinkt water uit zijn bak.",
+            "Boris borstelt de vacht van Keesje."
+          ]
+        },
+        {
+          image: "vogel.png",
+          alt: "Keesje ziet een vogel vliegen",
+          correct: "Dan ziet Keesje een vogel vliegen.",
+          options: [
+            "Dan ziet Keesje een vogel vliegen.",
+            "Keesje kijkt naar zijn voerbak.",
+            "Boris vindt een bot op de grond."
+          ]
+        },
+        {
+          image: "rennen.png",
+          alt: "Hij rent achter de vogel aan het bos in",
+          correct: "Hij rent er naar toe en verdwijnt in het bos.",
+          options: [
+            "Hij rent er naar toe en verdwijnt in het bos.",
+            "Keesje rolt een bal naar Boris toe.",
+            "De hond ligt rustig naast Boris op het pad."
+          ]
+        }
+      ],
+      school: [
+        {
+          image: "kring.png",
+          alt: "Kinderen zitten in de kring in de klas",
+          correct: "de kinderen zitten in de kring",
+          options: [
+            "de kinderen zitten in de kring",
+            "de meester leest een boek voor",
+            "het is pauze op het schoolplein"
+          ]
+        }
+      ]
+    };
+
+    /* SPEL 2 – Memory (weggelopen hond, sporen) */
+    const memorySetsByTopic = {
+      "weggelopen-hond": [
+        { key: "modder",  word: "modder",  img: "modder.png" },
+        { key: "plas",    word: "plas",    img: "plas.png" },
+        { key: "mist",    word: "mist",    img: "mist.png" },
+        { key: "spoor",   word: "spoor",   img: "spoor.png" },
+        { key: "poep",    word: "poep",    img: "poep.png" },
+        { key: "blad",    word: "blad",    img: "blad.png" },
+        { key: "riem",    word: "riem",    img: "riem.png" },
+        { key: "struik",  word: "struik",  img: "struik.png" }
+      ],
+      school: [
+        { key: "schrift", word: "schrift", img: "schrift.png" }
+      ]
+    };
+
+    /* SPEL 3 – Zoeklicht paren (zelfde woorden als spel 2) */
+    const SPOT_PAIRS = [
+      { id: "modder", word: "modder", img: "modder.png" },
+      { id: "plas",   word: "plas",   img: "plas.png" },
+      { id: "mist",   word: "mist",   img: "mist.png" },
+      { id: "spoor",  word: "spoor",  img: "spoor.png" },
+      { id: "poep",   word: "poep",   img: "poep.png" },
+      { id: "blad",   word: "blad",   img: "blad.png" },
+      { id: "riem",   word: "riem",   img: "riem.png" },
+      { id: "struik", word: "struik", img: "struik.png" }
+    ];
+
+    /* SPEL 4 – Woordbrij zinnen in volgorde (regen, modder, spoor volgen) */
+    const woordbrijRounds = [
+      { solution: ["Door","de","regen","is","het","gras","nat."] },
+      { solution: ["Ook","ligt","er","veel","modder."] },
+      { solution: ["In","de","modder","zijn","pootafdrukken","te","zien."] },
+      { solution: ["Laten","we","dit","spoor","volgen","door","het","bos."] }
+    ];
+
+    /* SPEL 6 – Platformzinnen bij de weggelopen hond */
+    const platLevels = [
+      { targetWords: ["Ik","volg","de","pootafdrukken"] },
+      { targetWords: ["De","hond","rent","naar","het","bos"] },
+      { targetWords: ["Ik","vind","de","riem","bij","de","boom"] },
+      { targetWords: ["De","hond","ligt","weer","in","zijn","mand"] }
+    ];
+
+    /* --------- STATE --------- */
+
+    let selectedAvatarKey = null;
+    let selectedTopicKey = null;
+    let avatarEl = null;
+    let currentPoint = "Punt 1";
+
+    const completed = new Set();
+    const unlocked = new Set(["Punt 1"]);
+    let levelStars = {};
+    let totalStars = 0;
+
+    let audioCtx = null;
+
+    /* Audio-bestanden voor uitleg (punten 1–3) */
+    const levelAudio = {
+      "Punt 1": new Audio("audio1.mp4"),
+      "Punt 2": new Audio("audio2.mp4"),
+      "Punt 3": new Audio("audio3.mp4")
+    };
+
+    /* --------- DOM --------- */
+
+    const avatarScreen = document.getElementById("avatar-screen");
+    const topicScreen  = document.getElementById("topic-screen");
+    const gameScreen   = document.getElementById("game-screen");
+
+    const avatarGrid   = document.getElementById("avatar-grid");
+    const topicGrid    = document.getElementById("topic-grid");
+    const avatarNext   = document.getElementById("avatar-next");
+    const topicBack    = document.getElementById("topic-back");
+    const topicStart   = document.getElementById("topic-start");
+
+    const hudAvatarIcon  = document.getElementById("hud-avatar-icon");
+    const hudAvatarLabel = document.getElementById("hud-avatar-label");
+    const hudTopicLabel  = document.getElementById("hud-topic-label");
+    const hudProgress    = document.getElementById("hud-progress");
+    const hudScore       = document.getElementById("hud-score");
+    const map            = document.getElementById("map");
+
+    const levelOverlay     = document.getElementById("level-overlay");
+    const levelTitle       = document.getElementById("level-title");
+    const levelStatus      = document.getElementById("level-status");
+    const levelStarsLabel  = document.getElementById("level-stars-label");
+    const backToMapBtn     = document.getElementById("back-to-map");
+    const level1Section    = document.getElementById("level1");
+    const level2Section    = document.getElementById("level2");
+    const level3Section    = document.getElementById("level3");
+    const level4Section    = document.getElementById("level4");
+    const level6Section    = document.getElementById("level6");
+    const levelPlaceholder = document.getElementById("level-placeholder");
+
+    const explainLevel1Btn = document.getElementById("explain-level1");
+    const explainLevel2Btn = document.getElementById("explain-level2");
+    const explainLevel3Btn = document.getElementById("explain-level3");
+    const explainLevel4Btn = document.getElementById("explain-level4");
+    const explainLevel6Btn = document.getElementById("explain-level6");
+
+    const qImage        = document.getElementById("q-image");
+    const qSentences    = document.getElementById("q-sentences");
+    const spel1Feedback = document.getElementById("spel1-feedback");
+
+    const memoryGrid     = document.getElementById("memory-grid");
+    const memoryFeedback = document.getElementById("memory-feedback");
+
+    const woordbrijScene    = document.getElementById("woordbrij-scene");
+    const woordbrijSky      = document.getElementById("woordbrij-sky");
+    const woordbrijSentence = document.getElementById("woordbrij-sentence");
+    const woordbrijFeedback = document.getElementById("woordbrij-feedback");
+    const fairyEl           = document.getElementById("fairy");
+
+    const spotRoot      = document.getElementById("spotRoot");
+    const spotField     = document.getElementById("spotField");
+    const spotFeedback  = document.getElementById("spotFeedback");
+    const spotReset     = document.getElementById("spotReset");
+    const spotOverlay   = document.getElementById("spotOverlay");
+
+    // Platform DOM
+    const platGameField          = document.getElementById("platGameField");
+    const platPlayerEl           = document.getElementById("platPlayer");
+    const platPlayerSprite       = document.getElementById("platPlayerSprite");
+    const platLevelBadge         = document.getElementById("platLevelBadge");
+    const platSentenceChosenEl   = document.getElementById("platSentenceChosen");
+    const platSentenceProgressEl = document.getElementById("platSentenceProgress");
+    const platFeedbackEl         = document.getElementById("platFeedback");
+    const platBtnLeft            = document.getElementById("platBtnLeft");
+    const platBtnRight           = document.getElementById("platBtnRight");
+    const platBtnJump            = document.getElementById("platBtnJump");
+    const platBtnCheck           = document.getElementById("platBtnCheck");
+    const platBtnNextLevel       = document.getElementById("platBtnNextLevel");
+
+    let currentQuestions = [];
+    let currentQuestionIndex = 0;
+    let wrongClicksSpel1 = 0;
+
+    let memoryCards = [];
+    let memoryFirstIndex = null;
+    let memoryLock = false;
+    let memoryMatchedPairs = 0;
+    let memoryMoves = 0;
+
+    let woordbrijIndex = 0;
+    let woordbrijErrors = 0;
+    let woordbrijCurrentPos = 0;
+
+    // Zoeklicht state
+    let spotItems = [];
+    let spotFirst = null;
+    let spotSecond = null;
+    let spotMatchedCount = 0;
+    let spotAttempts = 0;
+
+    // Platform state
+    let platCurrentLevelIndex = 0;
+    let platPlatforms = [];
+    let platChosenWords = [];
+    let platPlayerX = 40;
+    let platDirection = "right";
+    let platWalkingFrame = 0;
+    let platIsJumping = false;
+    let platCanControl = true;
+    let platLastWalkSprite = "wandelen1.png";
+    let platErrors = 0;
+
+    /* --------- HELPERS --------- */
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function normalizeSentence(s) {
+      return s.trim().replace(/\.+$/, "").toLowerCase();
+    }
+
+    function sentencesEqual(a, b) {
+      return normalizeSentence(a) === normalizeSentence(b);
+    }
+
+    function updateTotalStars() {
+      totalStars = Object.values(levelStars).reduce((x, y) => x + y, 0);
+      hudScore.textContent = "Sterren totaal: " + totalStars + " ⭐";
+    }
+
+    function getBestStarsForLevel(levelName) {
+      return levelStars[levelName] || 0;
+    }
+
+    function playPew() {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+
+      const ctx = audioCtx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "square";
+      const now = ctx.currentTime;
+      osc.frequency.setValueAtTime(1000, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+
+    /* --------- VOORLEES-STEM (fallback) --------- */
+
+    function speak(text) {
+      if (!("speechSynthesis" in window)) {
+        alert("Je browser ondersteunt geen voorlees-stem.");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "nl-NL";
+      window.speechSynthesis.speak(u);
+    }
+
+    /* --------- UITLEG PER LEVEL (met audio1/2/3) --------- */
+
+    function explainLevel(name) {
+      // stop alle lopende uitleg-audio
+      Object.values(levelAudio).forEach(a => {
+        if (!a) return;
+        a.pause();
+        a.currentTime = 0;
+      });
+
+      // voor punt 1–3 altijd mp4 afspelen
+      const audio = levelAudio[name];
+      if (audio) {
+        audio.play();
+        return;
+      }
+
+      // andere punten via voorlees-stem
+      let text = "";
+      if (name === "Punt 4") {
+        text = "De fee wil zinnen maken over de regen, de modder en de pootafdrukken. Schiet met de toverstaf op het eerste woord van de zin. Daarna op het volgende woord, totdat de hele zin klopt.";
+      } else if (name === "Punt 6") {
+        text = "Je ziet een poppetje en stenen met woorden. Loop naar links of rechts en spring tegen een steen om het woord te kiezen. De woorden komen in de zin onder het spel. Maak zo een goede zin over de hond.";
+      }
+      if (text) speak(text);
+    }
+
+    explainLevel1Btn.addEventListener("click", () => explainLevel("Punt 1"));
+    explainLevel2Btn.addEventListener("click", () => explainLevel("Punt 2"));
+    explainLevel3Btn.addEventListener("click", () => explainLevel("Punt 3"));
+    explainLevel4Btn.addEventListener("click", () => explainLevel("Punt 4"));
+    explainLevel6Btn.addEventListener("click", () => explainLevel("Punt 6"));
+
+    /* --------- AVATAR EN TOPIC KEUZE --------- */
+
+    avatarGrid.addEventListener("click", (e) => {
+      const img = e.target.closest(".avatar-choice");
+      if (!img) return;
+      selectedAvatarKey = img.dataset.avatar;
+      avatarGrid.querySelectorAll(".avatar-choice").forEach(c =>
+        c.classList.toggle("selected", c === img)
+      );
+      avatarNext.disabled = false;
+    });
+
+    avatarNext.addEventListener("click", () => {
+      if (!selectedAvatarKey) return;
+      avatarScreen.style.display = "none";
+      topicScreen.style.display = "block";
+    });
+
+    topicGrid.addEventListener("click", (e) => {
+      const card = e.target.closest(".card");
+      if (!card) return;
+      selectedTopicKey = card.dataset.topic;
+      topicGrid.querySelectorAll(".card").forEach(c =>
+        c.classList.toggle("selected", c === card)
+      );
+      topicStart.disabled = false;
+    });
+
+    topicBack.addEventListener("click", () => {
+      topicScreen.style.display = "none";
+      avatarScreen.style.display = "block";
+    });
+
+    topicStart.addEventListener("click", () => {
+      if (!selectedTopicKey || !selectedAvatarKey) return;
+      topicScreen.style.display = "none";
+      gameScreen.style.display = "block";
+      const avatar = avatarData[selectedAvatarKey];
+      const topic  = topicData[selectedTopicKey];
+      hudAvatarIcon.textContent = avatar.emoji;
+      hudAvatarLabel.textContent = "Avatar: " + avatar.label;
+      hudTopicLabel.textContent  = "Onderwerp: " + topic.label + " " + topic.emoji;
+      hudProgress.textContent    = "Punt 1 is beschikbaar";
+      initMapWithAvatar(avatar);
+      initSpel1();
+    });
+
+    /* --------- KAART EN BEWEGEN --------- */
+
+    function initMapWithAvatar(selectedAvatar) {
+      map.innerHTML = "";
+      currentPoint = "Punt 1";
+
+      // punten opnieuw tekenen
+      points.forEach(p => {
+        const el = document.createElement("div");
+        el.className = "point";
+        el.title = p.name;
+        el.dataset.name = p.name;
+        el.style.left = p.xPercent + "%";
+        el.style.top  = p.yPercent + "%";
+        if (!unlocked.has(p.name)) el.classList.add("locked");
+        map.appendChild(el);
+      });
+
+      // avatar plaatsen op Punt 1 met de gekozen afbeelding
+      const p1 = points.find(p => p.name === "Punt 1");
+      avatarEl = document.createElement("div");
+      avatarEl.className = "avatar-on-map";
+
+      const avatarImg = document.createElement("img");
+      avatarImg.src = selectedAvatar.img;
+      avatarImg.alt = selectedAvatar.label;
+      avatarEl.appendChild(avatarImg);
+
+      avatarEl.style.left = p1.xPercent + "%";
+      avatarEl.style.top  = p1.yPercent + "%";
+      map.appendChild(avatarEl);
+
+      // kliklisteners op de punten
+      map.querySelectorAll(".point").forEach(el => {
+        el.addEventListener("click", () => handlePointClick(el));
+      });
+    }
+
+    function handlePointClick(el) {
+      const name = el.dataset.name;
+      if (!unlocked.has(name)) {
+        alert("Deze is nog niet beschikbaar.");
+        return;
+      }
+      if (name === currentPoint) {
+        openLevel(name);
+        return;
+      }
+      const path = findPath(currentPoint, name);
+      const finalPath = path || [currentPoint, name];
+      animatePath(finalPath, () => {
+        currentPoint = name;
+        openLevel(name);
+      });
+    }
+
+    function moveAvatarToPoint(name) {
+      const p = points.find(pt => pt.name === name);
+      if (!p || !avatarEl) return;
+      avatarEl.style.left = p.xPercent + "%";
+      avatarEl.style.top  = p.yPercent + "%";
+    }
+
+    function findPath(start, goal) {
+      if (start === goal) return [start];
+      const queue = [[start]];
+      const visited = new Set([start]);
+      while (queue.length > 0) {
+        const path = queue.shift();
+        const node = path[path.length - 1];
+        const neighbours = adjacency[node] || [];
+        for (const n of neighbours) {
+          if (visited.has(n)) continue;
+          visited.add(n);
+          const newPath = path.concat(n);
+          if (n === goal) return newPath;
+          queue.push(newPath);
+        }
+      }
+      return null;
+    }
+
+    function animatePath(path, onDone) {
+      let i = 1;
+      function step() {
+        if (i >= path.length) {
+          if (onDone) onDone();
+          return;
+        }
+        moveAvatarToPoint(path[i]);
+        i++;
+        setTimeout(step, 850);
+      }
+      step();
+    }
+
+    function openLevel(name) {
+      levelOverlay.classList.add("active");
+      level1Section.style.display = "none";
+      level2Section.style.display = "none";
+      level3Section.style.display = "none";
+      level4Section.style.display = "none";
+      level6Section.style.display = "none";
+      levelPlaceholder.style.display = "none";
+
+      const best = getBestStarsForLevel(name);
+      levelStarsLabel.textContent =
+        best > 0
+          ? "Jouw beste score hier: " + best + " ⭐"
+          : "Jouw beste score hier: nog geen sterren.";
+
+      if (name === "Punt 1") {
+        levelTitle.textContent = "Punt 1 – Zinnen bij het plaatje";
+        levelStatus.textContent = "";
+        level1Section.style.display = "block";
+        initSpel1();
+      } else if (name === "Punt 2") {
+        levelTitle.textContent = "Punt 2 – Hondensporen memory";
+        levelStatus.textContent = "";
+        level2Section.style.display = "block";
+        initMemoryGame();
+      } else if (name === "Punt 3") {
+        levelTitle.textContent = "Punt 3 – Zoeklicht hondensporen";
+        levelStatus.textContent = "";
+        level3Section.style.display = "block";
+        initSpotGame();
+      } else if (name === "Punt 4") {
+        levelTitle.textContent = "Punt 4 – Zinnen in de regen";
+        levelStatus.textContent = "";
+        level4Section.style.display = "block";
+        initWoordbrijGame();
+      } else if (name === "Punt 6") {
+        levelTitle.textContent = "Punt 6 – Platform Zinnen Sprong";
+        levelStatus.textContent = "";
+        level6Section.style.display = "block";
+        initPlatformGame();
+      } else {
+        levelTitle.textContent = name + " – Spel nog in ontwikkeling";
+        levelStatus.textContent = "Hier komt later een nieuw spel.";
+        levelPlaceholder.style.display = "block";
+        levelPlaceholder.textContent = "Spel voor " + name + " wordt nog gemaakt.";
+      }
+    }
+
+    backToMapBtn.addEventListener("click", () => {
+      levelOverlay.classList.remove("active");
+    });
+
+    function completeLevel(name) {
+      if (!completed.has(name)) {
+        completed.add(name);
+        const next = progression[name] || [];
+        next.forEach(n => unlocked.add(n));
+        hudProgress.textContent =
+          next.length > 0
+            ? name + " behaald – nieuwe punten vrijgespeeld: " + next.join(", ")
+            : name + " behaald.";
+        map.querySelectorAll(".point").forEach(el => {
+          const pName = el.dataset.name;
+          if (unlocked.has(pName)) el.classList.remove("locked");
+          else el.classList.add("locked");
+        });
+        const pointEl = [...map.querySelectorAll(".point")].find(el => el.dataset.name === name);
+        if (pointEl) pointEl.classList.add("completed");
+      }
+      setTimeout(() => {
+        levelOverlay.classList.remove("active");
+      }, 800);
+    }
+
+    /* --------- SPEL 1 --------- */
+
+    function getQuestionsForCurrentTopic() {
+      return questionsByTopic[selectedTopicKey] || questionsByTopic["weggelopen-hond"];
+    }
+
+    function initSpel1() {
+      currentQuestions = getQuestionsForCurrentTopic();
+      currentQuestionIndex = 0;
+      wrongClicksSpel1 = 0;
+      spel1Feedback.textContent = "";
+      spel1Feedback.className = "";
+      renderCurrentQuestion();
+    }
+
+    function renderCurrentQuestion() {
+      if (!currentQuestions || currentQuestions.length === 0) return;
+      if (currentQuestionIndex >= currentQuestions.length) return;
+      const q = currentQuestions[currentQuestionIndex];
+      qImage.src = q.image;
+      qImage.alt = q.alt || "plaatje bij de zin";
+      qSentences.innerHTML = "";
+      spel1Feedback.textContent = "";
+      spel1Feedback.className = "";
+      const shuffledOptions = shuffle(q.options);
+      shuffledOptions.forEach(sentence => {
+        const btn = document.createElement("button");
+        btn.className = "sentence-btn";
+        btn.textContent = sentence;
+        btn.addEventListener("click", () => handleSentenceClick(sentence, q.correct));
+        qSentences.appendChild(btn);
+      });
+    }
+
+    function handleSentenceClick(selected, correct) {
+      const isCorrect = sentencesEqual(selected, correct);
+      if (!isCorrect) {
+        wrongClicksSpel1++;
+        spel1Feedback.textContent = "Dat klopt nog niet. Lees nog eens goed.";
+        spel1Feedback.className = "bad";
+        return;
+      }
+      spel1Feedback.textContent = "Goed gedaan! Dat past bij het plaatje.";
+      spel1Feedback.className = "good";
+      if (currentQuestionIndex === currentQuestions.length - 1) {
+        let stars = 3;
+        if (wrongClicksSpel1 > 0 && wrongClicksSpel1 <= 3) stars = 2;
+        else if (wrongClicksSpel1 > 3) stars = 1;
+        const previousBest = getBestStarsForLevel("Punt 1") || 0;
+        if (stars > previousBest) levelStars["Punt 1"] = stars;
+        updateTotalStars();
+        spel1Feedback.textContent +=
+          " Je hebt dit level gehaald met " +
+          stars + " ⭐ (beste: " + getBestStarsForLevel("Punt 1") + " ⭐).";
+        completeLevel("Punt 1");
+      } else {
+        currentQuestionIndex++;
+        setTimeout(() => renderCurrentQuestion(), 800);
+      }
+    }
+
+    /* --------- SPEL 2: MEMORY --------- */
+
+    function getMemorySetForCurrentTopic() {
+      return memorySetsByTopic[selectedTopicKey] || memorySetsByTopic["weggelopen-hond"];
+    }
+
+    function initMemoryGame() {
+      const baseSet = getMemorySetForCurrentTopic();
+      memoryGrid.innerHTML = "";
+      memoryFeedback.textContent = "";
+      memoryCards = [];
+      memoryFirstIndex = null;
+      memoryLock = false;
+      memoryMatchedPairs = 0;
+      memoryMoves = 0;
+
+      const cardObjects = [];
+      baseSet.forEach(item => {
+        cardObjects.push({ key: item.key, type: "word",  label: item.word });
+        cardObjects.push({ key: item.key, type: "image", img: item.img  });
+      });
+
+      const shuffledCards = shuffle(cardObjects);
+      shuffledCards.forEach((data, index) => {
+        const card = document.createElement("div");
+        card.className = "memory-card";
+        card.dataset.index = index;
+        card.dataset.type = data.type;
+        card.dataset.key  = data.key;
+        card.textContent  = "?";
+        card.addEventListener("click", () => handleMemoryClick(index));
+        memoryGrid.appendChild(card);
+        memoryCards.push({ data, element: card, flipped: false, matched: false });
+      });
+    }
+
+    function flipCard(index) {
+      const c = memoryCards[index];
+      if (!c || c.matched) return;
+      c.flipped = true;
+      const el = c.element;
+      el.classList.add("flipped");
+      el.textContent = "";
+      if (c.data.type === "word") {
+        el.textContent = c.data.label;
+      } else {
+        const img = document.createElement("img");
+        img.src = c.data.img;
+        img.alt = c.data.key;
+        el.appendChild(img);
+      }
+    }
+
+    function hideCard(index) {
+      const c = memoryCards[index];
+      if (!c) return;
+      c.flipped = false;
+      const el = c.element;
+      el.classList.remove("flipped");
+      el.textContent = "?";
+    }
+
+    function matchCard(index) {
+      const c = memoryCards[index];
+      if (!c) return;
+      c.matched = true;
+      c.element.classList.add("matched");
+    }
+
+    function handleMemoryClick(index) {
+      if (memoryLock) return;
+      const card = memoryCards[index];
+      if (!card || card.matched || card.flipped) return;
+      flipCard(index);
+      if (memoryFirstIndex === null) {
+        memoryFirstIndex = index;
+        return;
+      }
+      memoryMoves++;
+      const first = memoryCards[memoryFirstIndex];
+      const second = card;
+      const isMatch = first.data.key === second.data.key &&
+                      first.data.type !== second.data.type;
+      if (isMatch) {
+        memoryLock = true;
+        setTimeout(() => {
+          matchCard(memoryFirstIndex);
+          matchCard(index);
+          memoryFirstIndex = null;
+          memoryLock = false;
+          memoryMatchedPairs++;
+          if (memoryMatchedPairs === getMemorySetForCurrentTopic().length) {
+            let stars = 3;
+            if (memoryMoves > 14 && memoryMoves <= 20) stars = 2;
+            else if (memoryMoves > 20) stars = 1;
+            const previousBest = getBestStarsForLevel("Punt 2") || 0;
+            if (stars > previousBest) levelStars["Punt 2"] = stars;
+            updateTotalStars();
+            memoryFeedback.textContent =
+              "Geweldig! Je hebt alle kaartjes gevonden. " +
+              "Je hebt " + memoryMoves + " pogingen gebruikt en " +
+              stars + " ⭐ gehaald (beste: " + getBestStarsForLevel("Punt 2") + " ⭐).";
+            completeLevel("Punt 2");
+          }
+        }, 2600);
+      } else {
+        memoryLock = true;
+        setTimeout(() => {
+          hideCard(memoryFirstIndex);
+          hideCard(index);
+          memoryFirstIndex = null;
+          memoryLock = false;
+        }, 2600);
+      }
+    }
+
+    /* --------- SPEL 3: ZOEKLICHT MEMORY --------- */
+
+    function updateSpotlightPosition(clientX, clientY) {
+      if (!spotRoot) return;
+      const rect = spotRoot.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      document.documentElement.style.setProperty("--cursor-x", x + "px");
+      document.documentElement.style.setProperty("--cursor-y", y + "px");
+    }
+
+    if (spotRoot) {
+      spotRoot.addEventListener("mousemove", (e) => {
+        updateSpotlightPosition(e.clientX, e.clientY);
+      });
+      spotRoot.addEventListener("touchmove", (e) => {
+        const t = e.touches[0];
+        updateSpotlightPosition(t.clientX, t.clientY);
+      }, { passive: true });
+    }
+
+    function clearSpotSelections() {
+      if (spotFirst) {
+        if (spotFirst.data.type === "word") {
+          spotFirst.el.classList.remove("spot-selected-word", "spot-wrong-word");
+        } else {
+          spotFirst.el.classList.remove("spot-selected-picture", "spot-wrong-picture");
+        }
+      }
+      if (spotSecond) {
+        if (spotSecond.data.type === "word") {
+          spotSecond.el.classList.remove("spot-selected-word", "spot-wrong-word");
+        } else {
+          spotSecond.el.classList.remove("spot-selected-picture", "spot-wrong-picture");
+        }
+      }
+      spotFirst = null;
+      spotSecond = null;
+    }
+
+    function initSpotGame() {
+      if (!spotField) return;
+      spotField.innerHTML = "";
+      spotItems = [];
+      spotFirst = null;
+      spotSecond = null;
+      spotMatchedCount = 0;
+      spotAttempts = 0;
+      spotFeedback.textContent = "Zoek de paren: lees het woord en zoek het juiste plaatje.";
+      spotFeedback.className = "spot-feedback-text";
+
+      if (spotOverlay) spotOverlay.style.display = "block";
+
+      const elements = [];
+      SPOT_PAIRS.forEach(pair => {
+        elements.push({ id: pair.id, type: "word",    word: pair.word });
+        elements.push({ id: pair.id, type: "picture", img:  pair.img });
+      });
+
+      const shuffled = shuffle(elements);
+
+      const fieldWidth  = spotField.clientWidth;
+      const fieldHeight = spotField.clientHeight;
+      const total = shuffled.length;
+      const cols = 4;
+      const rows = Math.ceil(total / cols);
+      const cellW = fieldWidth  / cols;
+      const cellH = fieldHeight / rows;
+      const padding = 20;
+
+      shuffled.forEach((data, idx) => {
+        let el;
+        if (data.type === "word") {
+          el = document.createElement("span");
+          el.className = "spot-word";
+          el.textContent = data.word;
+        } else {
+          el = document.createElement("div");
+          el.className = "spot-picture";
+          const img = document.createElement("img");
+          img.src = data.img;
+          img.alt = data.id;
+          el.appendChild(img);
+        }
+        el.dataset.id = data.id;
+        el.dataset.type = data.type;
+
+        el.style.left = "-9999px";
+        el.style.top = "-9999px";
+        spotField.appendChild(el);
+
+        const r = el.getBoundingClientRect();
+        const w = r.width;
+        const h = r.height;
+
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+
+        let centerX = col * cellW + cellW / 2;
+        let centerY = row * cellH + cellH / 2;
+
+        const jitterX = (Math.random() - 0.5) * cellW * 0.4;
+        const jitterY = (Math.random() - 0.5) * cellH * 0.4;
+        centerX += jitterX;
+        centerY += jitterY;
+
+        let left = centerX - w / 2;
+        let top  = centerY - h / 2;
+
+        left = Math.max(padding, Math.min(fieldWidth  - w - padding, left));
+        top  = Math.max(padding, Math.min(fieldHeight - h - padding, top));
+
+        el.style.left = left + "px";
+        el.style.top  = top  + "px";
+
+        el.addEventListener("click", (evt) => {
+          evt.stopPropagation();
+          handleSpotClick(el);
+        });
+
+        spotItems.push({ el, data });
+      });
+    }
+
+    function handleSpotClick(el) {
+      const obj = spotItems.find(i => i.el === el);
+      if (!obj) return;
+      if (el.classList.contains("spot-matched")) return;
+      if (spotFirst && spotFirst.el === el) return;
+
+      if (!spotFirst) {
+        spotFirst = obj;
+        if (obj.data.type === "word") {
+          el.classList.add("spot-selected-word");
+        } else {
+          el.classList.add("spot-selected-picture");
+        }
+        spotFeedback.textContent = "Goed! Nu het kaartje zoeken dat erbij hoort.";
+        spotFeedback.className = "spot-feedback-text";
+        return;
+      }
+
+      if (!spotSecond) {
+        spotSecond = obj;
+        if (obj.data.type === "word") {
+          el.classList.add("spot-selected-word");
+        } else {
+          el.classList.add("spot-selected-picture");
+        }
+        spotAttempts++;
+        checkSpotMatch();
+      }
+    }
+
+    function checkSpotMatch() {
+      if (!spotFirst || !spotSecond) return;
+
+      const a = spotFirst.data;
+      const b = spotSecond.data;
+      const isMatch = a.id === b.id && a.type !== b.type;
+
+      if (isMatch) {
+        playPew();
+        spotFeedback.textContent = "Jeeej! Dat is een goed paar! 🌟";
+        spotFeedback.className = "spot-feedback-text ok";
+
+        spotFirst.el.classList.add("spot-matched");
+        spotSecond.el.classList.add("spot-matched");
+        spotMatchedCount++;
+
+        if (spotMatchedCount === SPOT_PAIRS.length) {
+          let stars = 3;
+          if (spotAttempts > 12 && spotAttempts <= 18) stars = 2;
+          else if (spotAttempts > 18) stars = 1;
+          const previousBest = getBestStarsForLevel("Punt 3") || 0;
+          if (stars > previousBest) levelStars["Punt 3"] = stars;
+          updateTotalStars();
+          spotFeedback.textContent =
+            "Fantastisch! Je hebt alle sporen gevonden. " +
+            "Je gebruikte " + spotAttempts + " pogingen en haalde " +
+            stars + " ⭐ (beste: " + getBestStarsForLevel("Punt 3") + " ⭐).";
+
+          if (spotOverlay) {
+            spotOverlay.style.display = "none";
+          }
+          completeLevel("Punt 3");
+        }
+
+        setTimeout(() => clearSpotSelections(), 250);
+      } else {
+        spotFeedback.textContent = "Oeps, deze horen niet bij elkaar. Probeer een ander paar.";
+        spotFeedback.className = "spot-feedback-text error";
+
+        if (spotFirst.data.type === "word") {
+          spotFirst.el.classList.add("spot-wrong-word");
+        } else {
+          spotFirst.el.classList.add("spot-wrong-picture");
+        }
+        if (spotSecond.data.type === "word") {
+          spotSecond.el.classList.add("spot-wrong-word");
+        } else {
+          spotSecond.el.classList.add("spot-wrong-picture");
+        }
+
+        setTimeout(() => clearSpotSelections(), 650);
+      }
+    }
+
+    if (spotReset) {
+      spotReset.addEventListener("click", () => initSpotGame());
+    }
+
+    /* --------- SPEL 4: WOORDBRIJ MET FEE --------- */
+
+    function initWoordbrijGame() {
+      woordbrijIndex = 0;
+      woordbrijErrors = 0;
+      woordbrijFeedback.textContent = "";
+      woordbrijFeedback.className = "";
+      renderWoordbrijRound();
+    }
+
+    function clearWoordbrijSkyAndSentence() {
+      woordbrijSky.innerHTML = "";
+      woordbrijSentence.innerHTML = "";
+    }
+
+    function renderWoordbrijRound() {
+      clearWoordbrijSkyAndSentence();
+      woordbrijFeedback.textContent = "";
+      woordbrijFeedback.className = "";
+      woordbrijCurrentPos = 0;
+
+      const round = woordbrijRounds[woordbrijIndex];
+      const words = shuffle(round.solution);
+
+      const n = words.length;
+      const cols = Math.min(n, 4);
+      const rows = Math.ceil(n / cols);
+
+      const leftStart = 22;
+      const leftEnd   = 78;
+      const usableWidth = leftEnd - leftStart;
+      const hStep = cols > 1 ? usableWidth / (cols - 1) : 0;
+
+      const topStart = 10;
+      const rowHeight = 18;
+
+      words.forEach((w, i) => {
+        const leaf = document.createElement("div");
+        leaf.className = "leaf-word";
+        leaf.textContent = w;
+        leaf.dataset.word = w;
+
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+
+        let left = leftStart + col * hStep;
+        let top  = topStart + row * rowHeight;
+
+        left += (Math.random() * 6 - 3);
+        top  += (Math.random() * 4 - 2);
+
+        left = Math.max(20, Math.min(80, left));
+        top  = Math.max(8,  Math.min(40, top));
+
+        leaf.style.left = left + "%";
+        leaf.style.top  = top + "%";
+
+        leaf.addEventListener("click", () => handleLeafClick(leaf));
+        woordbrijSky.appendChild(leaf);
+      });
+    }
+
+    function shootMagicBeamTo(targetEl) {
+      if (!fairyEl || !woordbrijScene) return;
+      const sceneRect  = woordbrijScene.getBoundingClientRect();
+      const fairyRect  = fairyEl.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+
+      const startX = fairyRect.left + fairyRect.width * 0.75;
+      const startY = fairyRect.top  + fairyRect.height * 0.25;
+
+      const endX = targetRect.left + targetRect.width / 2;
+      const endY = targetRect.top  + targetRect.height / 2;
+
+      const x1 = startX - sceneRect.left;
+      const y1 = startY - sceneRect.top;
+      const x2 = endX   - sceneRect.left;
+      const y2 = endY   - sceneRect.top;
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const distance = Math.sqrt(dx*dx + dy*dy);
+      const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      const beam = document.createElement("div");
+      beam.className = "magic-beam";
+      beam.style.left = x1 + "px";
+      beam.style.top  = (y1 - 2) + "px";
+      beam.style.width = distance + "px";
+      beam.style.transform = "rotate(" + angleDeg + "deg)";
+
+      woordbrijScene.appendChild(beam);
+      setTimeout(() => beam.remove(), 450);
+    }
+
+    function handleLeafClick(leaf) {
+      const round = woordbrijRounds[woordbrijIndex];
+      const targetWord = round.solution[woordbrijCurrentPos];
+      const clicked = leaf.dataset.word;
+
+      if (clicked !== targetWord) {
+        woordbrijErrors++;
+        leaf.classList.add("leaf-wrong");
+        setTimeout(() => leaf.classList.remove("leaf-wrong"), 350);
+        woordbrijFeedback.textContent = "Niet dat blaadje. Kijk goed naar de zin.";
+        woordbrijFeedback.className = "bad";
+        return;
+      }
+
+      playPew();
+      shootMagicBeamTo(leaf);
+
+      leaf.classList.add("leaf-hit");
+      leaf.style.cursor = "default";
+      leaf.onclick = null;
+      woordbrijFeedback.textContent = "";
+      woordbrijFeedback.className = "";
+
+      setTimeout(() => {
+        const groundWord = document.createElement("div");
+        groundWord.className = "woordbrij-ground-word";
+        groundWord.textContent = clicked;
+        woordbrijSentence.appendChild(groundWord);
+
+        leaf.remove();
+        woordbrijCurrentPos++;
+
+        if (woordbrijCurrentPos >= round.solution.length) {
+          woordbrijFeedback.textContent = "Mooi! De zin klopt.";
+          woordbrijFeedback.className = "good";
+
+          if (woordbrijIndex === woordbrijRounds.length - 1) {
+            let stars = 3;
+            if (woordbrijErrors > 0 && woordbrijErrors <= 5) stars = 2;
+            else if (woordbrijErrors > 5) stars = 1;
+            const previousBest = getBestStarsForLevel("Punt 4") || 0;
+            if (stars > previousBest) levelStars["Punt 4"] = stars;
+            updateTotalStars();
+            woordbrijFeedback.textContent +=
+              " Je hebt alle zinnen gemaakt met " + stars +
+              " ⭐ (beste: " + getBestStarsForLevel("Punt 4") + " ⭐).";
+            completeLevel("Punt 4");
+          } else {
+            woordbrijIndex++;
+            setTimeout(() => renderWoordbrijRound(), 900);
+          }
+        }
+      }, 1200);
+    }
+
+    /* --------- SPEL 6: PLATFORM ZINNEN SPRONG --------- */
+
+    function platShuffleArray(arr) {
+      for (let i = 0; i < arr.length; i++) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function platCreateSparkles() {
+      const fieldRect = platGameField.getBoundingClientRect();
+      const sparkleCount = 10;
+      for (let i = 0; i < sparkleCount; i++) {
+        const s = document.createElement("div");
+        s.className = "plat-sparkle";
+        const x = 40 + Math.random() * (fieldRect.width - 80);
+        const y = 40 + Math.random() * 80;
+        s.style.left = x + "px";
+        s.style.top = y + "px";
+        platGameField.appendChild(s);
+        setTimeout(() => s.remove(), 700);
+      }
+    }
+
+    function platCreatePlatformsForLevel(level) {
+      platPlatforms.forEach(p => p.el.remove());
+      platPlatforms = [];
+
+      const words = [...level.targetWords];
+      platShuffleArray(words);
+
+      const fieldRect = platGameField.getBoundingClientRect();
+      const baseY = 210;
+      const count = words.length;
+      const marginX = 60;
+      const usableWidth = Math.max(0, fieldRect.width - 2 * marginX);
+      const step = count > 1 ? usableWidth / (count - 1) : 0;
+
+      words.forEach((word, i) => {
+        const el = document.createElement("div");
+        el.className = "plat-platform";
+        el.textContent = word;
+
+        platGameField.appendChild(el);
+        const width = el.getBoundingClientRect().width || 90;
+
+        let centerX;
+        if (count === 1) {
+          centerX = fieldRect.width / 2;
+        } else {
+          centerX = marginX + i * step;
+        }
+
+        let left = centerX - width / 2;
+        left = Math.max(10, Math.min(fieldRect.width - width - 10, left));
+
+        el.style.left = left + "px";
+        el.style.bottom = baseY + "px";
+
+        platPlatforms.push({
+          el,
+          word,
+          x: left,
+          y: baseY,
+          width,
+          chosen: false
+        });
+      });
+    }
+
+    function platUpdateChosenSentenceDisplay() {
+      if (platChosenWords.length === 0) {
+        platSentenceChosenEl.textContent = "";
+        platSentenceProgressEl.textContent = "Spring tegen de woorden in de volgorde die jij denkt.";
+      } else {
+        platSentenceChosenEl.textContent = platChosenWords.join(" ");
+        platSentenceProgressEl.textContent = "Klaar? Klik op ✔ om te controleren.";
+      }
+    }
+
+    function platLoadLevel(index) {
+      const level = platLevels[index];
+      platChosenWords = [];
+      platFeedbackEl.textContent = "";
+      platFeedbackEl.className = "plat-feedback";
+      platBtnNextLevel.classList.add("disabled");
+      platCanControl = true;
+
+      platLevelBadge.textContent = `Level ${index + 1} / ${platLevels.length}`;
+      platCreatePlatformsForLevel(level);
+      platUpdateChosenSentenceDisplay();
+
+      platPlayerX = 40;
+      platUpdatePlayerPosition();
+      platDirection = "right";
+      platWalkingFrame = 0;
+      platLastWalkSprite = "wandelen1.png";
+      platPlayerSprite.src = platLastWalkSprite;
+    }
+
+    function initPlatformGame() {
+      platCurrentLevelIndex = 0;
+      platErrors = 0;
+      platLoadLevel(platCurrentLevelIndex);
+    }
+
+    function platUpdatePlayerPosition() {
+      const fieldRect = platGameField.getBoundingClientRect();
+      const minX = 10;
+      const maxX = fieldRect.width - 90;
+      if (platPlayerX < minX) platPlayerX = minX;
+      if (platPlayerX > maxX) platPlayerX = maxX;
+      platPlayerEl.style.left = platPlayerX + "px";
+    }
+
+    function platSetWalkSprite(dir) {
+      if (platIsJumping) return;
+      if (dir === "right") {
+        platWalkingFrame = 1 - platWalkingFrame;
+        const sprite = platWalkingFrame === 0 ? "wandelen1.png" : "wandelen2.png";
+        platLastWalkSprite = sprite;
+        platPlayerSprite.src = sprite;
+      } else {
+        platWalkingFrame = 1 - platWalkingFrame;
+        const sprite = platWalkingFrame === 0 ? "wandelen3.png" : "wandelen4.png";
+        platLastWalkSprite = sprite;
+        platPlayerSprite.src = sprite;
+      }
+    }
+
+    function platMovePlayer(delta) {
+      if (!platCanControl) return;
+      platPlayerX += delta;
+      platUpdatePlayerPosition();
+      platDirection = delta > 0 ? "right" : "left";
+      platSetWalkSprite(platDirection);
+    }
+
+    function platDoJump() {
+      if (!platCanControl || platIsJumping) return;
+
+      platIsJumping = true;
+      const previousSprite = platLastWalkSprite;
+      platPlayerSprite.src = "poppetjespring.png";
+      platPlayerEl.classList.add("jump");
+
+      platHandleJumpHit();
+
+      setTimeout(() => {
+        platPlayerEl.classList.remove("jump");
+        platIsJumping = false;
+        platPlayerSprite.src = previousSprite;
+      }, 550);
+    }
+
+    function platHandleJumpHit() {
+      const playerRect = platPlayerEl.getBoundingClientRect();
+      const playerCenterX = playerRect.left + playerRect.width / 2;
+
+      let hitPlatform = null;
+
+      platPlatforms.forEach(p => {
+        if (p.chosen) return;
+        const rect = p.el.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const closeX = Math.abs(centerX - playerCenterX) < rect.width / 2;
+        if (closeX) {
+          hitPlatform = p;
+        }
+      });
+
+      if (!hitPlatform) {
+        platFeedbackEl.textContent = "Je sprong, maar raakte geen woordsteen.";
+        platFeedbackEl.className = "plat-feedback error";
+        return;
+      }
+
+      hitPlatform.chosen = true;
+      hitPlatform.el.classList.add("collected");
+      platChosenWords.push(hitPlatform.word);
+      platFeedbackEl.textContent = `Je koos het woord: "${hitPlatform.word}".`;
+      platFeedbackEl.className = "plat-feedback";
+      platUpdateChosenSentenceDisplay();
+    }
+
+    function platCheckSentence() {
+      const level = platLevels[platCurrentLevelIndex];
+      const target = level.targetWords;
+
+      if (platChosenWords.length === 0) {
+        platFeedbackEl.textContent = "Je hebt nog geen woorden gekozen. Spring eerst tegen de stenen.";
+        platFeedbackEl.className = "plat-feedback error";
+        return;
+      }
+
+      if (platChosenWords.length !== target.length) {
+        platFeedbackEl.textContent = "Er ontbreken nog woorden in je zin. Probeer nog een keer.";
+        platFeedbackEl.className = "plat-feedback error";
+        platErrors++;
+        platResetChoices();
+        return;
+      }
+
+      let correct = true;
+      for (let i = 0; i < target.length; i++) {
+        if (platChosenWords[i] !== target[i]) {
+          correct = false;
+          break;
+        }
+      }
+
+      if (correct) {
+        platFeedbackEl.textContent = "Super! Je zin klopt helemaal. 🌟";
+        platFeedbackEl.className = "plat-feedback ok";
+        platCanControl = false;
+        platBtnNextLevel.classList.remove("disabled");
+        platCreateSparkles();
+
+        if (platCurrentLevelIndex === platLevels.length - 1) {
+          let stars = 3;
+          if (platErrors > 0 && platErrors <= 4) stars = 2;
+          else if (platErrors > 4) stars = 1;
+          const previousBest = getBestStarsForLevel("Punt 6") || 0;
+          if (stars > previousBest) levelStars["Punt 6"] = stars;
+          updateTotalStars();
+          platFeedbackEl.textContent =
+            "Geweldig! Je hebt alle zinnen gemaakt. " +
+            "Je maakte " + platErrors + " foutje(s) en haalde " +
+            stars + " ⭐ (beste: " + getBestStarsForLevel("Punt 6") + " ⭐).";
+          completeLevel("Punt 6");
+        }
+      } else {
+        platFeedbackEl.textContent = "Nog niet helemaal goed. Probeer de woorden in een andere volgorde.";
+        platFeedbackEl.className = "plat-feedback error";
+        platErrors++;
+        platResetChoices();
+      }
+    }
+
+    function platResetChoices() {
+      platChosenWords = [];
+      platPlatforms.forEach(p => {
+        p.chosen = false;
+        p.el.classList.remove("collected");
+      });
+      platUpdateChosenSentenceDisplay();
+    }
+
+    // Knoppen platform
+    platBtnLeft.addEventListener("click", () => platMovePlayer(-35));
+    platBtnRight.addEventListener("click", () => platMovePlayer(35));
+    platBtnJump.addEventListener("click", () => platDoJump());
+    platBtnCheck.addEventListener("click", () => platCheckSentence());
+
+    platBtnNextLevel.addEventListener("click", () => {
+      if (platCurrentLevelIndex < platLevels.length - 1) {
+        platCurrentLevelIndex++;
+        platLoadLevel(platCurrentLevelIndex);
+      } else {
+        platFeedbackEl.textContent = "Je hebt alle zinnen gemaakt! 🎉";
+        platFeedbackEl.className = "plat-feedback ok";
+        platBtnNextLevel.classList.add("disabled");
+      }
+    });
+
+    // Toetsenbordbesturing alleen als level 6 actief is
+    document.addEventListener("keydown", (e) => {
+      if (level6Section.style.display === "none" || !levelOverlay.classList.contains("active")) {
+        return;
+      }
+      if (!document.hasFocus()) return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        platMovePlayer(-30);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        platMovePlayer(30);
+      } else if (e.key === " " || e.key === "ArrowUp") {
+        e.preventDefault();
+        platDoJump();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        platCheckSentence();
+      }
+    });
+
+    // alvast platformspel klaarzetten
+    window.addEventListener("load", () => {
+      initPlatformGame();
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Verhalenbos – Weggelopen Hond</title>
+<style>
+body{font-family:Arial;background:#1b1b1b;color:#fff;margin:0;padding:20px;}
+.screen{max-width:900px;margin:auto;background:#2a2a2a;padding:20px;border-radius:12px;}
+.card{background:#444;padding:20px;border-radius:10px;cursor:pointer;text-align:center;margin:10px 0;}
+.card.selected{outline:3px solid #ffcc4d;}
+button{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;background:#ffcc4d;}
+#map{position:relative;height:500px;background:url('bospad.png') center/cover no-repeat;border-radius:12px;margin-top:20px;}
+.point{position:absolute;width:20px;height:20px;border-radius:50%;background:#ffd;}
+#level-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);}
+.panel{background:#333;padding:20px;border-radius:12px;max-width:700px;width:90%;}
+</style>
+</head>
+<body>
+
+<div class="screen" id="avatar">
+  <h2>Kies je avatar</h2>
+  <div class="card" data-av="👦">👦 Jongetje</div>
+  <div class="card" data-av="👧">👧 Meisje</div>
+  <button id="toTopic" disabled>Verder</button>
+</div>
+
+<div class="screen" id="topic" style="display:none;">
+  <h2>Avontuur</h2>
+  <div class="card selected" data-topic="weggelopen-hond">🐕‍🦺 De weggelopen hond</div>
+  <button id="startGame">Start</button>
+</div>
+
+<div class="screen" id="game" style="display:none;">
+  <h2>Verhalenbos – Weggelopen hond</h2>
+  <div id="map"></div>
+</div>
+
+<div id="level-overlay">
+  <div class="panel">
+    <button onclick="closeLevel()">Terug</button>
+    <h3 id="lvlTitle"></h3>
+    <div id="lvlContent"></div>
+  </div>
+</div>
+
+<script>
+let avatar=null;
+document.querySelectorAll('#avatar .card').forEach(c=>{
+  c.onclick=()=>{document.querySelectorAll('#avatar .card').forEach(x=>x.classList.remove('selected'));c.classList.add('selected');avatar=c.dataset.av;document.getElementById('toTopic').disabled=false;}
+});
+document.getElementById('toTopic').onclick=()=>{document.getElementById('avatar').style.display='none';document.getElementById('topic').style.display='block';};
+document.getElementById('startGame').onclick=()=>{document.getElementById('topic').style.display='none';document.getElementById('game').style.display='block';initMap();};
+
+const points=[
+ {name:'Punt 1',x:20,y:50},
+ {name:'Punt 2',x:30,y:30},
+ {name:'Punt 3',x:35,y:60},
+ {name:'Punt 4',x:50,y:15},
+ {name:'Punt 5',x:55,y:45},
+ {name:'Punt 6',x:55,y:80},
+ {name:'Punt 7',x:70,y:25},
+ {name:'Punt 8',x:70,y:65}
+];
+
+function initMap(){
+ const map=document.getElementById('map');
+ map.innerHTML='';
+ points.forEach(p=>{
+   let d=document.createElement('div');
+   d.className='point';
+   d.style.left=p.x+'%';
+   d.style.top=p.y+'%';
+   d.onclick=()=>openLevel(p.name);
+   map.appendChild(d);
+ });
+}
+
+function openLevel(name){
+ document.getElementById('level-overlay').style.display='flex';
+ document.getElementById('lvlTitle').innerText=name;
+ let html="";
+ if(name==='Punt 1'){
+   html+=`<p>Kies de juiste zin:</p>
+     <img src="lopen.png" style="width:200px;"><br>
+     <button onclick="alert('goed!')">Boris loopt met Keesje het bos in.</button>
+     <button onclick="alert('fout')">Keesje ligt te slapen.</button>`;
+ }
+ else if(name==='Punt 2'){
+   html+="<p>Memory komt hier (modder, pootafdruk, spoor, struik, bladeren)</p>";
+ }
+ else if(name==='Punt 3'){
+   html+="<p>Zoeklicht memory komt hier.</p>";
+ }
+ else if(name==='Punt 4'){
+   html+="<p>Blaadjes woordvolgorde spel komt hier.</p>";
+ }
+ else {
+   html+="<p>Placeholder voor nieuw spel.</p>";
+ }
+ document.getElementById('lvlContent').innerHTML=html;
+}
+function closeLevel(){document.getElementById('level-overlay').style.display='none';}
+</script>
+
+</body>
+</html>

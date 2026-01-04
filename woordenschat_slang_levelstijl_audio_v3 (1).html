@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Woordenschat Slang – Eigen audio (elk woord 1x)</title>
+<style>
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{margin:0;background:#333;color:#f5f5f5;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
+  .screen{width:1100px;max-width:100%;padding:20px;border-radius:22px;background:#151515;box-shadow:0 22px 60px rgba(0,0,0,.55);border:1px solid #1f2937}
+  #field{position:relative;width:100%;height:560px;margin-top:12px;background:#0b0b0b;overflow:hidden;border-radius:16px;border:1px solid #1f2937}
+  canvas{width:100%;height:100%;display:block}
+  button{padding:10px 22px;border-radius:999px;border:none;cursor:pointer;background:#ffcc4d;color:#3a2500;font-weight:700;box-shadow:0 4px 10px rgba(0,0,0,.5);transition:transform .1s ease,box-shadow .1s ease,filter .1s ease}
+  button:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(0,0,0,.6);filter:brightness(1.02)}
+  button:active{transform:translateY(1px);box-shadow:0 3px 8px rgba(0,0,0,.5);filter:none}
+  button:disabled{opacity:.55;cursor:default;transform:none;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+  .top-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .badge{font-size:.85rem;padding:6px 12px;border-radius:999px;background:rgba(250,204,21,.08);border:1px solid #facc15;color:#facc15;font-weight:700}
+  .center-row{display:flex;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+  #feedback{margin-top:10px;min-height:24px;text-align:center;font-size:18px;color:#e5e7eb}
+
+  .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(2px);z-index:5}
+  .overlay.show{display:flex}
+  .listen-card{text-align:center;padding:16px 18px;border-radius:16px;border:1px solid #1f2937;background:rgba(10,10,10,.9);box-shadow:0 10px 30px rgba(0,0,0,.55);max-width:720px}
+  .listen-card .icon{font-size:42px;margin-bottom:8px}
+  .listen-card .title{font-weight:800;margin-bottom:6px}
+  .listen-card .small{color:#cbd5e1;font-size:14px}
+
+  @media (max-width:768px){#field{height:360px}}
+</style>
+</head>
+<body>
+
+<div class="screen">
+  <div class="top-row">
+    <div class="badge">🐍 Woordenschat Slang</div>
+    <div class="badge" id="scoreBadge">Score: 0 • Lengte: 3 • Nog: 11</div>
+  </div>
+
+  <div id="field">
+    <canvas id="game" width="1100" height="560" aria-label="Woordenschat slang speelveld"></canvas>
+
+    <div class="overlay" id="overlay" aria-hidden="true">
+      <div class="listen-card">
+        <div class="icon" id="overlayIcon">🎧</div>
+        <div class="title" id="overlayTitle">Luister…</div>
+        <div class="small" id="overlaySmall">Daarna: hap het woord dat erbij past!</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="feedback"></div>
+
+  <div class="center-row">
+    <button id="startBtn">▶ Start</button>
+    <button id="pauseBtn" disabled>⏸ Pauze</button>
+    <button id="resetBtn">🔄 Opnieuw</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ✅ Te oefenen woorden: ELK KOMT 1x AAN BOD per spel
+  const LEARNED = [
+    { w: "poot",   group:"dieren" },
+    { w: "blaft",  group:"dieren" },
+    { w: "spoor",  group:"dieren" },
+    { w: "das",    group:"dieren" },
+    { w: "riem",   group:"dieren" },
+    { w: "regen",  group:"weer" },
+    { w: "wolk",   group:"weer" },
+    { w: "mist",   group:"weer" },
+    { w: "modder", group:"buiten" },
+    { w: "struik", group:"buiten" },
+    { w: "poep",   group:"buiten" },
+  ];
+
+  // 🎲 Afleiders (willekeurig maar thematisch)
+  const FILLERS = {
+    dieren: ["kat","hond","staart","oor","snuit","klauw","vacht","bot","kooi","ren","gromt","miauwt","bijt","sprong","nest","pootje","eekhoorn","konijn"],
+    weer:   ["wind","zon","storm","sneeuw","hagel","donker","licht","bui","koud","warm","plens","druppel","bliksem","donder","paraplu","spat","spetter"],
+    buiten: ["gras","tak","blad","boom","pad","plas","zand","steen","tuin","vijver","veld","straat","laars","jas","fiets","stok","vuil"]
+  };
+
+  // ===== Eigen audio =====
+  // Plaats je mp4's in dezelfde map als dit html-bestand, of zet AUDIO_BASE op bv. "audio/"
+  const AUDIO_BASE = "";
+  const CLUE_SUFFIX = "123.mp4";        // poot123.mp4 (omschrijving)
+  const CONFIRM_SUFFIX = "456.mp4";     // poot456.mp4 (bevestiging)
+
+  function clueSrc(word){ return `${AUDIO_BASE}${word}${CLUE_SUFFIX}`; }
+  function confirmSrc(word){ return `${AUDIO_BASE}${word}${CONFIRM_SUFFIX}`; }
+
+  // ALLEEN jouw audio (geen TTS)
+  const audio = new Audio();
+  audio.preload = "auto";
+  let currentAudioResolve = null;
+
+  function stopAudio(){
+    try{ audio.pause(); audio.currentTime = 0; }catch(_){}
+    if (currentAudioResolve){
+      const r = currentAudioResolve; currentAudioResolve = null; r();
+    }
+  }
+
+  function playClip(src){
+    try{ if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch(_){}
+    stopAudio();
+    return new Promise((resolve) => {
+      currentAudioResolve = resolve;
+      audio.onended = () => { currentAudioResolve=null; resolve(true); };
+      audio.onerror = () => { currentAudioResolve=null; resolve(false); };
+      audio.src = src;
+      const p = audio.play();
+      if (p && typeof p.catch === "function"){
+        p.catch(() => { audio.onerror && audio.onerror(); });
+      }
+    });
+  }
+
+  // ===== Canvas / Game =====
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  const COLS = 22, ROWS = 14;
+  const CELL = Math.min(Math.floor(canvas.width / COLS), Math.floor(canvas.height / ROWS));
+  const BOARD_W = COLS * CELL;
+  const BOARD_H = ROWS * CELL;
+  const OFF_X = Math.floor((canvas.width - BOARD_W) / 2);
+  const OFF_Y = Math.floor((canvas.height - BOARD_H) / 2);
+
+  const startBtn = document.getElementById("startBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const scoreBadge = document.getElementById("scoreBadge");
+  const feedback = document.getElementById("feedback");
+  const overlay = document.getElementById("overlay");
+  const overlayIcon = document.getElementById("overlayIcon");
+  const overlayTitle = document.getElementById("overlayTitle");
+  const overlaySmall = document.getElementById("overlaySmall");
+
+  // Langzamer + 1 bolletje erbij/eraf
+  const BUBBLES = 4;
+  const TICK_MS = 420;   // <-- langzamer
+  const GROW_BY = 1;     // goed = +1
+  const SHRINK_BY = 1;   // fout/zelf = -1
+  const MIN_LEN = 2;
+
+  // Woord-kaarten (horizontaal, niet schuin)
+  const WORD_PAD_X = Math.round(CELL * 0.35);
+  const WORD_PAD_Y = Math.round(CELL * 0.22);
+  const WORD_R = 14;
+  const WORD_FONT = Math.max(12, Math.round(CELL * 0.38));
+  const SAFE_CELL_MARGIN = 1;
+
+  // Spacing tussen woorden (niet tegen elkaar aan)
+  const WORD_GAP_PX = 14;         // extra marge tussen kaartjes
+  const MIN_WORD_CELL_DIST = 2;   // ook minimaal 2 cellen uit elkaar (centers)
+
+  // "Niet in directe richting van slang" (spawn fairness)
+  const FORBID_AHEAD_STEPS = 5;   // niet in de 5 vakjes voor de kop
+  const FORBID_NEAR_HEAD = 2;     // ook niet te dichtbij de kop
+
+  let snake, dir, nextDir, foods, target, score, started, listening, timer, paused;
+
+  // queue: elk woord 1x
+  let targetQueue = [];
+
+  function randInt(n){ return Math.floor(Math.random()*n); }
+  function choice(arr){ return arr[randInt(arr.length)]; }
+  function shuffle(arr){
+    const a = arr.slice();
+    for (let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function updateBadge(){
+    const remaining = targetQueue.length + (target ? 1 : 0);
+    scoreBadge.textContent = `Score: ${score} • Lengte: ${snake.length} • Nog: ${remaining}`;
+  }
+
+  function stopLoop(){ if (timer) clearInterval(timer); timer = null; }
+  function startLoop(){ stopLoop(); timer = setInterval(tick, TICK_MS); }
+
+  function showOverlay(icon, title, small){
+    overlayIcon.textContent = icon || "🎧";
+    overlayTitle.textContent = title || "Luister…";
+    overlaySmall.textContent = small || "Daarna: hap het woord dat erbij past!";
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden","false");
+  }
+  function hideOverlay(){
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden","true");
+  }
+
+  function resetState(){
+    stopLoop();
+    stopAudio();
+    try{ if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch(_){}
+    snake = [{x:6,y:7},{x:5,y:7},{x:4,y:7}];
+    dir = {x:1,y:0};
+    nextDir = {x:1,y:0};
+    foods = [];
+    target = null;
+    score = 0;
+    started = false;
+    listening = false;
+    paused = false;
+    feedback.textContent = "";
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = "⏸ Pauze";
+    hideOverlay();
+    targetQueue = shuffle(LEARNED);
+    updateBadge();
+    draw();
+  }
+
+  // Placement helpers
+  function cellOccupiedBySnake(x,y){
+    return snake.some(s=>s.x===x && s.y===y);
+  }
+  function cellCenter(x,y){
+    return { cx: OFF_X + x*CELL + CELL/2, cy: OFF_Y + y*CELL + CELL/2 };
+  }
+  function measureWordBox(word){
+    ctx.font = `900 ${WORD_FONT}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+    const textW = ctx.measureText(word).width;
+    const w = Math.ceil(textW + 2*WORD_PAD_X);
+    const h = Math.ceil(WORD_FONT + 2*WORD_PAD_Y);
+    return {w,h};
+  }
+  function safeCellForWord(box){
+    const safeX = Math.ceil((box.w/2) / CELL) + SAFE_CELL_MARGIN;
+    const safeY = Math.ceil((box.h/2) / CELL) + SAFE_CELL_MARGIN;
+    const minX = safeX, maxX = COLS - safeX - 1;
+    const minY = safeY, maxY = ROWS - safeY - 1;
+    const x = minX + randInt(Math.max(1, maxX - minX + 1));
+    const y = minY + randInt(Math.max(1, maxY - minY + 1));
+    return {x,y};
+  }
+
+  function rectForFoodAt(cell, box){
+    const p = cellCenter(cell.x, cell.y);
+    return { x: p.cx - box.w/2, y: p.cy - box.h/2, w: box.w, h: box.h };
+  }
+  function rectsOverlap(a,b, gap=0){
+    return !(a.x + a.w + gap <= b.x ||
+             b.x + b.w + gap <= a.x ||
+             a.y + a.h + gap <= b.y ||
+             b.y + b.h + gap <= a.y);
+  }
+  function manhattan(a,b){ return Math.abs(a.x-b.x) + Math.abs(a.y-b.y); }
+
+  function forbiddenSpawnCells(){
+    const forbid = new Set();
+    const head = snake[0];
+    // cells ahead
+    for (let k=1;k<=FORBID_AHEAD_STEPS;k++){
+      const fx = (head.x + dir.x*k + COLS) % COLS;
+      const fy = (head.y + dir.y*k + ROWS) % ROWS;
+      forbid.add(`${fx},${fy}`);
+    }
+    // near head (diamond)
+    for (let dx=-FORBID_NEAR_HEAD; dx<=FORBID_NEAR_HEAD; dx++){
+      for (let dy=-FORBID_NEAR_HEAD; dy<=FORBID_NEAR_HEAD; dy++){
+        if (Math.abs(dx)+Math.abs(dy) <= FORBID_NEAR_HEAD){
+          const fx = (head.x + dx + COLS) % COLS;
+          const fy = (head.y + dy + ROWS) % ROWS;
+          forbid.add(`${fx},${fy}`);
+        }
+      }
+    }
+    return forbid;
+  }
+
+  function canPlaceFood(cell, box){
+    // not on snake
+    if (cellOccupiedBySnake(cell.x, cell.y)) return false;
+
+    // not in forbidden (ahead/near head)
+    const forbid = forbiddenSpawnCells();
+    if (forbid.has(`${cell.x},${cell.y}`)) return false;
+
+    const rect = rectForFoodAt(cell, box);
+
+    // spacing from other foods: no overlap + gap and min cell distance
+    for (const f of foods){
+      const otherRect = rectForFoodAt({x:f.x, y:f.y}, f.box);
+      if (rectsOverlap(rect, otherRect, WORD_GAP_PX)) return false;
+      if (manhattan(cell, {x:f.x,y:f.y}) < MIN_WORD_CELL_DIST) return false;
+    }
+    return true;
+  }
+
+  function makeFood(word, isCorrect=false){
+    const box = measureWordBox(word);
+    for (let t=0; t<9000; t++){
+      const c = safeCellForWord(box);
+      if (canPlaceFood(c, box)){
+        return {x:c.x, y:c.y, word, isCorrect, box};
+      }
+    }
+    // fallback: try without direction rule if board is too full (rare)
+    for (let t=0; t<9000; t++){
+      const c = safeCellForWord(box);
+      if (!cellOccupiedBySnake(c.x,c.y)){
+        const rect = rectForFoodAt(c, box);
+        let ok = true;
+        for (const f of foods){
+          const otherRect = rectForFoodAt({x:f.x, y:f.y}, f.box);
+          if (rectsOverlap(rect, otherRect, WORD_GAP_PX)) { ok=false; break; }
+        }
+        if (ok) return {x:c.x, y:c.y, word, isCorrect, box};
+      }
+    }
+    return {x:2,y:2, word, isCorrect, box};
+  }
+
+  // Round logic
+  function uniqueWords(arr){
+    const seen = new Set();
+    const out = [];
+    for (const w of arr){
+      if (!seen.has(w)){
+        seen.add(w);
+        out.push(w);
+      }
+    }
+    return out;
+  }
+  function pickFillerWords(targetObj, count){
+    const same = (FILLERS[targetObj.group] || []).slice();
+    const otherThemes = Object.keys(FILLERS).filter(k => k !== targetObj.group);
+    const other = otherThemes.flatMap(k => FILLERS[k]);
+    const picks = [];
+    while (picks.length < count && same.length) picks.push(same.splice(randInt(same.length),1)[0]);
+    while (picks.length < count && other.length) picks.push(other.splice(randInt(other.length),1)[0]);
+    return picks;
+  }
+
+  function nextTarget(){
+    target = targetQueue.shift() || null;
+  }
+
+  function setupRoundWords(){
+    const distractors = pickFillerWords(target, BUBBLES - 1);
+    let words = uniqueWords([target.w, ...distractors]).slice(0, BUBBLES);
+    const pool = Object.values(FILLERS).flat();
+    while (words.length < BUBBLES){
+      const w = choice(pool);
+      if (w !== target.w && !words.includes(w)) words.push(w);
+    }
+
+    foods = [];
+    // place correct first so it's always guaranteed & fairly placed
+    foods.push(makeFood(target.w, true));
+    for (const w of words){
+      if (w === target.w) continue;
+      foods.push(makeFood(w, false));
+    }
+
+    // ensure exactly 4
+    foods = foods.slice(0, BUBBLES);
+    // safety
+    if (!foods.some(f => f.word === target.w)){
+      foods[0] = makeFood(target.w, true);
+    }
+  }
+
+  async function playClueAndGo(){
+    listening = true;
+    showOverlay("🎧", "Luister…", "Daarna: hap het woord dat erbij past!");
+    stopLoop();
+
+    const ok = await playClip(clueSrc(target.w));
+    if (!ok){
+      overlaySmall.textContent = `Audio niet gevonden: ${target.w}${CLUE_SUFFIX}`;
+      await new Promise(r => setTimeout(r, 900));
+    }
+
+    if (paused) return;
+    listening = false;
+    hideOverlay();
+    startLoop();
+  }
+
+  async function playConfirmThenNextRound(){
+    stopLoop();
+    listening = true;
+    showOverlay("✅", "Goed zo!", "Even luisteren…");
+
+    const ok = await playClip(confirmSrc(target.w));
+    if (!ok){
+      overlaySmall.textContent = `Audio niet gevonden: ${target.w}${CONFIRM_SUFFIX}`;
+      await new Promise(r => setTimeout(r, 700));
+    }
+
+    if (paused) return;
+    listening = false;
+    hideOverlay();
+
+    if (targetQueue.length === 0){
+      // klaar
+      stopLoop();
+      showOverlay("🏁", "Klaar!", "Alle woorden zijn geweest. Druk op ‘Opnieuw’ om nog eens te spelen.");
+      pauseBtn.disabled = true;
+      return;
+    }
+
+    nextTarget();
+    setupRoundWords();
+    updateBadge();
+    draw();
+    playClueAndGo();
+  }
+
+  function startGame(){
+    if (started) return;
+    started = true;
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    paused = false;
+
+    // prime queue
+    targetQueue = shuffle(LEARNED);
+    nextTarget();
+    setupRoundWords();
+    updateBadge();
+    draw();
+    playClueAndGo();
+  }
+
+  // Snake mechanics
+  function growSnake(n){
+    const tail = snake[snake.length-1];
+    for (let i=0;i<n;i++) snake.push({x:tail.x, y:tail.y});
+  }
+  function shrinkSnake(n){
+    for (let i=0;i<n;i++) if (snake.length > MIN_LEN) snake.pop();
+  }
+  function penalize(){
+    score = Math.max(0, score-1);
+    shrinkSnake(SHRINK_BY);
+    updateBadge();
+    feedback.textContent = "❌";
+    setTimeout(()=>{ if (feedback.textContent==="❌") feedback.textContent=""; }, 650);
+  }
+
+  function tick(){
+    if (!started || listening || paused || !target) return;
+
+    dir = nextDir;
+    const head = snake[0];
+    let newHead = {x: head.x + dir.x, y: head.y + dir.y};
+
+    // Wrap-around
+    if (newHead.x < 0) newHead.x = COLS - 1;
+    if (newHead.x >= COLS) newHead.x = 0;
+    if (newHead.y < 0) newHead.y = ROWS - 1;
+    if (newHead.y >= ROWS) newHead.y = 0;
+
+    // zelf raken = -1 bolletje (geen game over)
+    if (snake.some((s,i)=> i!==0 && s.x===newHead.x && s.y===newHead.y)){
+      penalize();
+      draw();
+      return;
+    }
+
+    snake.unshift(newHead);
+
+    const hitIndex = foods.findIndex(f => f.x===newHead.x && f.y===newHead.y);
+    if (hitIndex >= 0){
+      const hit = foods[hitIndex];
+      if (hit.word === target.w){
+        score += 2;
+        growSnake(GROW_BY);
+        updateBadge();
+        feedback.textContent = "✅";
+        setTimeout(()=>{ if (feedback.textContent==="✅") feedback.textContent=""; }, 650);
+        draw();
+        playConfirmThenNextRound();
+        return;
+      } else {
+        penalize();
+
+        // replace wrong word with new filler (still 4), fair placement rules apply
+        foods.splice(hitIndex, 1);
+        const pool = uniqueWords(pickFillerWords(target, 2).concat(Object.values(FILLERS).flat()));
+        let w = choice(pool.filter(x => x !== target.w)) || "wind";
+        foods.push(makeFood(w, false));
+
+        // ensure correct still there (should be)
+        if (!foods.some(f => f.word === target.w)){
+          foods[0] = makeFood(target.w, true);
+        }
+
+        snake.pop();
+        draw();
+        return;
+      }
+    }
+
+    snake.pop();
+    updateBadge();
+    draw();
+  }
+
+  // Controls
+  function setDir(nx,ny){
+    if (!started || listening || paused) return;
+    if (dir.x === -nx && dir.y === -ny) return;
+    nextDir = {x:nx, y:ny};
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowUp"){ e.preventDefault(); setDir(0,-1); }
+    else if (e.key === "ArrowDown"){ e.preventDefault(); setDir(0,1); }
+    else if (e.key === "ArrowLeft"){ e.preventDefault(); setDir(-1,0); }
+    else if (e.key === "ArrowRight"){ e.preventDefault(); setDir(1,0); }
+  }, {passive:false});
+
+  // Pause toggle
+  function togglePause(){
+    if (!started) return;
+    paused = !paused;
+
+    if (paused){
+      pauseBtn.textContent = "▶ Verder";
+      stopLoop();
+      try{ audio.pause(); } catch(_){}
+      showOverlay("⏸", "Pauze", "Klik op ‘Verder’ om door te gaan.");
+    } else {
+      pauseBtn.textContent = "⏸ Pauze";
+      hideOverlay();
+      if (listening){
+        const p = audio.play();
+        if (p && typeof p.catch === "function") p.catch(()=>{});
+      } else {
+        startLoop();
+      }
+    }
+  }
+
+  // Drawing
+  function roundRect(ctx,x,y,w,h,r){
+    const radius = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+radius,y);
+    ctx.arcTo(x+w,y,x+w,y+h,radius);
+    ctx.arcTo(x+w,y+h,x,y+h,radius);
+    ctx.arcTo(x,y+h,x,y,radius);
+    ctx.arcTo(x,y,x+w,y,radius);
+    ctx.closePath();
+  }
+
+  function drawWordCard(f){
+    const p = cellCenter(f.x, f.y);
+    const box = f.box || measureWordBox(f.word);
+    const x = p.cx - box.w/2;
+    const y = p.cy - box.h/2;
+
+    // shadow
+    ctx.shadowColor = "rgba(0,0,0,.35)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 6;
+
+    // gentle color variety (post-it)
+    const tint = (f.word.charCodeAt(0) % 3);
+    ctx.fillStyle = tint===0 ? "rgba(255,255,255,.92)" : (tint===1 ? "rgba(220,252,231,.92)" : "rgba(254,249,195,.92)");
+
+    roundRect(ctx, x, y, box.w, box.h, WORD_R);
+    ctx.fill();
+
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = "rgba(0,0,0,.08)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "#111827";
+    ctx.font = `900 ${WORD_FONT}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(f.word, p.cx, p.cy);
+  }
+
+  function drawSnake(){
+    for (let i = snake.length - 1; i >= 0; i--){
+      const s = snake[i];
+      const px = OFF_X + s.x*CELL + CELL/2;
+      const py = OFF_Y + s.y*CELL + CELL/2;
+      const r = (CELL * 0.42) * (1 - Math.min(i, 10)*0.012);
+      const isHead = i === 0;
+
+      ctx.save();
+      ctx.translate(px, py);
+
+      const g = ctx.createRadialGradient(-r*0.3, -r*0.3, r*0.2, 0, 0, r*1.2);
+      g.addColorStop(0, "rgba(34,197,94,.98)");
+      g.addColorStop(1, "rgba(20,120,70,.98)");
+      ctx.fillStyle = g;
+
+      ctx.beginPath();
+      ctx.arc(0,0,r,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(0,0,0,.22)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      if (!isHead){
+        ctx.fillStyle = "rgba(255,255,255,.12)";
+        const step = r*0.55;
+        for (let yy=-r*0.6; yy<=r*0.6; yy+=step){
+          for (let xx=-r*0.6; xx<=r*0.6; xx+=step){
+            if ((xx*xx + yy*yy) <= r*r*0.65){
+              ctx.beginPath();
+              ctx.arc(xx + ((i%2)*2-1)*1.2, yy, 1.2, 0, Math.PI*2);
+              ctx.fill();
+            }
+          }
+        }
+      } else {
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.arc(-r*0.28, -r*0.18, r*0.18, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc( r*0.28, -r*0.18, r*0.18, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#111827";
+        ctx.beginPath(); ctx.arc(-r*0.28, -r*0.18, r*0.09, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc( r*0.28, -r*0.18, r*0.09, 0, Math.PI*2); ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function drawBackground(){
+    // meer kleur: groen/blauw tinten + zachte stipjes
+    for (let y=0; y<ROWS; y++){
+      for (let x=0; x<COLS; x++){
+        const px = OFF_X + x*CELL;
+        const py = OFF_Y + y*CELL;
+        const even = (x+y)%2===0;
+        ctx.fillStyle = even ? "rgba(16,185,129,.12)" : "rgba(59,130,246,.07)";
+        ctx.fillRect(px,py,CELL,CELL);
+      }
+    }
+    for (let i=0;i<42;i++){
+      const px = OFF_X + Math.random()*BOARD_W;
+      const py = OFF_Y + Math.random()*BOARD_H;
+      ctx.fillStyle = (i%3===0) ? "rgba(250,204,21,.16)" : (i%3===1 ? "rgba(34,197,94,.14)" : "rgba(59,130,246,.13)");
+      ctx.beginPath();
+      ctx.arc(px,py,2.2,0,Math.PI*2);
+      ctx.fill();
+    }
+    const vg = ctx.createRadialGradient(canvas.width*0.5, canvas.height*0.5, BOARD_W*0.22, canvas.width*0.5, canvas.height*0.5, BOARD_W*0.78);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,.33)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawBackground();
+    foods.forEach(drawWordCard);
+    drawSnake();
+  }
+
+  // Buttons
+  startBtn.addEventListener("click", startGame);
+  pauseBtn.addEventListener("click", togglePause);
+  resetBtn.addEventListener("click", resetState);
+
+  resetState();
+})();
+</script>
+</body>
+</html>

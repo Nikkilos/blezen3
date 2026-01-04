@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Het Modderpad van Keesje</title>
+<style>
+body{
+  margin:0;
+  background:#111;
+  font-family:Arial, sans-serif;
+  padding:20px;
+  display:flex;
+  justify-content:center;
+}
+.game-wrapper{width:960px}
+h1{text-align:center;color:white}
+
+.game-container{
+  position:relative;
+  width:100%;
+  height:420px;
+  border-radius:20px;
+  overflow:hidden;
+  background:black;
+}
+.bg-video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+/* Regen */
+.rain{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:0;
+  z-index:3;
+}
+.rain.active{opacity:1;}
+.raindrop{
+  position:absolute;
+  width:2px;
+  height:16px;
+  background:rgba(255,255,255,0.8);
+  animation:fall 0.7s linear infinite;
+}
+@keyframes fall{
+  from{transform:translateY(-120px);}
+  to{transform:translateY(500px);}
+}
+
+/* Lopend poppetje */
+.character{
+  position:absolute;
+  bottom:40px;
+  width:90px;
+  z-index:4;
+}
+.character img{width:100%}
+
+/* Hurkend poppetje — GEEN vaste left meer */
+.character-inspect{
+  position:absolute;
+  bottom:40px;
+  width:90px;
+  display:none;
+  z-index:5;
+}
+.character-inspect img{width:100%}
+
+/* Modderplas */
+.puddle{
+  position:absolute;
+  bottom:10px;
+  left:340px;
+  width:120px;
+  display:none;
+  z-index:2;
+}
+.puddle img{width:100%}
+
+/* Vergrootglas met spoor */
+.magnifier{
+  position:absolute;
+  bottom:25px;
+  left:650px;
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  border:5px solid white;
+  overflow:hidden;
+  background:black;
+  display:none;
+  z-index:6;
+}
+.magnifier img{
+  width:100%;
+  transform:scale(1.6);
+}
+
+/* Eindscherm */
+.end-screen{
+  position:absolute;
+  inset:0;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  background:#000;
+  z-index:20;
+}
+.end-screen img{width:300px}
+.end-screen button{
+  margin-top:20px;
+  font-size:20px;
+  padding:12px 20px;
+  border-radius:12px;
+  border:none;
+  cursor:pointer;
+}
+
+/* UI */
+.ui-panel{
+  background:white;
+  border-radius:12px;
+  padding:12px;
+  margin-top:10px;
+}
+.choices button{
+  padding:8px 14px;
+  border-radius:20px;
+  border:none;
+  cursor:pointer;
+  background:#cfe2ff;
+  margin-right:8px;
+  font-size:16px;
+}
+.feedback.ok{color:green;font-weight:bold}
+.feedback.error{color:red;font-weight:bold}
+</style>
+</head>
+
+<body>
+<div class="game-wrapper">
+<h1>Het Modderpad van Keesje</h1>
+
+<div class="game-container">
+  <video class="bg-video" src="natuurvideo.mp4" autoplay muted loop></video>
+  <div class="rain" id="rain"></div>
+
+  <div class="puddle" id="puddle"><img src="moddergrond.png"></div>
+
+  <div class="magnifier" id="magnifier"><img src="spoor.png"></div>
+
+  <div class="character" id="character">
+    <img id="characterImg" src="mens1.png">
+  </div>
+
+  <div class="character-inspect" id="inspect">
+    <img src="mens3.png">
+  </div>
+
+  <div class="end-screen" id="endScreen">
+    <img src="hurken.png">
+    <button onclick="playAudio()">🔊 Beluister het verhaal</button>
+    <audio id="audio" src="audio6.mp4"></audio>
+  </div>
+</div>
+
+<div class="ui-panel">
+  <div id="sentence"></div>
+  <div class="choices" id="choices"></div>
+  <div id="feedback" class="feedback"></div>
+</div>
+</div>
+
+<script>
+const char=document.getElementById("character");
+const img=document.getElementById("characterImg");
+const rain=document.getElementById("rain");
+const puddle=document.getElementById("puddle");
+const magnifier=document.getElementById("magnifier");
+const inspect=document.getElementById("inspect");
+const endScreen=document.getElementById("endScreen");
+
+const sentence=document.getElementById("sentence");
+const choices=document.getElementById("choices");
+const feedback=document.getElementById("feedback");
+
+let x=40,frame=1,step=0,interval=null;
+
+function createRain(){
+  if(rain.children.length>0)return;
+  for(let i=0;i<70;i++){
+    const d=document.createElement("div");
+    d.className="raindrop";
+    d.style.left=Math.random()*960+"px";
+    d.style.animationDelay=Math.random()+"s";
+    rain.appendChild(d);
+  }
+  rain.classList.add("active");
+}
+
+function walkTo(target,cb){
+  clearInterval(interval);
+  interval=setInterval(()=>{
+    if(x>=target){clearInterval(interval);cb();return;}
+    x+=6;
+    char.style.left=x+"px";
+    frame=frame===1?2:1;
+    img.src=frame===1?"mens1.png":"mens2.png";
+    if(step===0 && x>120)createRain();
+  },120);
+}
+
+function restartGame(){ location.reload(); }
+
+function question(text,options,correct,cb){
+  sentence.textContent=text;
+  choices.innerHTML="";
+  feedback.textContent="";
+  options.forEach(w=>{
+    const b=document.createElement("button");
+    b.textContent=w;
+    b.onclick=()=>{
+      if(w===correct){
+        feedback.textContent="✔ Goed!";
+        feedback.className="feedback ok";
+        setTimeout(cb,600);
+      }else restartGame();
+    };
+    choices.appendChild(b);
+  });
+}
+
+/* SPEL */
+function start(){
+  walkTo(180,()=>question(
+    "Het is nu aan het ......",
+    ["regenen","rennen","vriezen"],
+    "regenen",
+    ()=>walkTo(280,()=>vraagModder())
+  ));
+}
+
+function vraagModder(){
+  puddle.style.display="block";
+  question(
+    "Door de regen is er ____.",
+    ["ijs","modder","wind"],
+    "modder",
+    ()=>walkTo(420,()=>vraagVies())
+  );
+}
+
+function vraagVies(){
+  question(
+    "Mijn laars is nu ____.",
+    ["geel","gek","vies"],
+    "vies",
+    ()=>spoorScene()
+  );
+}
+
+function spoorScene(){
+  char.style.display="none";
+
+  /* ✅ hurkend poppetje exact op dezelfde plek */
+  inspect.style.left = x + "px";
+  inspect.style.display="block";
+
+  magnifier.style.display="block";
+
+  question(
+    "Dan zie ik een ____ op de grond.",
+    ["boom","spoor","blad"],
+    "spoor",
+    ()=>vraagKeesje()
+  );
+}
+
+function vraagKeesje(){
+  question(
+    "Is dit spoor van ____?",
+    ["Keesje","opa","vissen"],
+    "Keesje",
+    ()=>laatsteZin()
+  );
+}
+
+function laatsteZin(){
+  question(
+    "Laten we ____ gaan zoeken!",
+    ["niet","verder","nooit"],
+    "verder",
+    ()=>loopWeg()
+  );
+}
+
+function loopWeg(){
+  magnifier.style.display="none";
+  inspect.style.display="none";
+
+  /* ✅ lopend poppetje komt TERUG op dezelfde plek */
+  char.style.left = x + "px";
+  char.style.display="block";
+
+  walkTo(1100,()=>{ endScreen.style.display="flex"; });
+}
+
+function playAudio(){
+  const audio=document.getElementById("audio");
+  audio.currentTime=0;
+  audio.play();
+}
+
+start();
+</script>
+</body>
+</html>
+
+

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Verhalenbos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #1b1b1b;
+      color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .screen {
+      width: 1000px;
+      max-width: 100%;
+      padding: 24px;
+      border-radius: 16px;
+      background: #2a2a2a;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    p {
+      margin-top: 0;
+    }
+
+    .center-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-size: 16px;
+      padding: 10px 24px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #ffcc4d;
+      color: #3a2500;
+      font-weight: 600;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.6);
+    }
+
+    /* Avatar selectie */
+
+    .avatar-row {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin: 24px 0;
+    }
+
+    .avatar-choice {
+      width: 140px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, outline 0.15s ease;
+      outline: none;
+      display: block;
+    }
+
+    .avatar-choice:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+    }
+
+    .avatar-choice.selected {
+      transform: scale(1.03);
+      box-shadow: 0 0 12px rgba(255,204,77,0.7);
+      outline: 3px solid #ffcc4d;
+    }
+
+    /* Onderwerpkaarten */
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .card {
+      border-radius: 12px;
+      background: #3a3a3a;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      user-select: none;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+    }
+
+    .card.selected {
+      border-color: #ffcc4d;
+      box-shadow: 0 0 12px rgba(255,204,77,0.7);
+    }
+
+    .card-emoji {
+      font-size: 40px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .card-title {
+      font-weight: 600;
+    }
+
+    /* HUD + kaart */
+
+    .map-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .hud {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 15px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hud-only-score{
+      justify-content: flex-end;
+    }
+    @media (max-width: 520px){
+      .hud-only-score{justify-content:center;}
+    }
+
+    .hud-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hud-avatar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-avatar-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #3a3a3a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .map-container {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      border-radius: 12px;
+      border: 3px solid #f5deb3;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #map-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 12px;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+    }
+
+    .point {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #f5deb3;
+      border: 2px solid #5b3b10;
+      box-shadow: 0 0 6px rgba(0,0,0,0.7);
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+    }
+
+    .point.locked {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .point.completed {
+      background: #4caf50;
+      border-color: #b2ffb2;
+    }
+
+    .avatar-on-map {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translate(-50%, -100%);
+      pointer-events: none;
+      overflow: hidden;
+      transition: left 0.8s linear, top 0.8s linear;
+    }
+
+    .avatar-on-map img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SCHERM 1: AVATAR KEUZE -->
+  <div class="screen" id="avatar-screen">
+    <h1>Kies je avatar</h1>
+    <p style="text-align:center; max-width: 600px; margin: 0 auto;">
+      Klik op een figuur om jouw avatar te kiezen en druk daarna op <strong>Verder</strong>.
+    </p>
+
+    <div class="avatar-row" id="avatar-grid">
+      <img src="persoon1.png" alt="Avatar 1" class="avatar-choice" data-avatar="avatar1">
+      <img src="persoon2.png" alt="Avatar 2" class="avatar-choice" data-avatar="avatar2">
+      <img src="persoon3.png" alt="Avatar 3" class="avatar-choice" data-avatar="avatar3">
+    </div>
+
+    <div class="center-row">
+      <button id="avatar-next" disabled>Verder</button>
+    </div>
+  </div>
+
+  <!-- SCHERM 2: ONDERWERP KEUZE -->
+  <div class="screen" id="topic-screen" style="display:none;">
+    <h1>Kies je avontuur</h1>
+    <p style="text-align:center; max-width: 650px; margin: 0 auto;">
+      In welke wereld wil jij verhalen lezen en spellen spelen?
+    </p>
+
+    <div class="card-grid" id="topic-grid">
+      <div class="card" data-topic="weggelopen-hond">
+        <span class="card-emoji">🐕‍🦺</span>
+        <div class="card-title">De weggelopen hond</div>
+      </div>
+      <div class="card" data-topic="verdwaalde-jongen">
+        <span class="card-emoji">🧒</span>
+        <div class="card-title">De verdwaalde jongen</div>
+      </div>
+      <div class="card" data-topic="schattenjacht">
+        <span class="card-emoji">🗺️</span>
+        <div class="card-title">Zoektocht naar de schat</div>
+      </div>
+      <div class="card" data-topic="natuurbingo">
+        <span class="card-emoji">🌳</span>
+        <div class="card-title">Natuurbingo wandeling</div>
+      </div>
+    </div>
+
+    <div class="center-row">
+      <button id="topic-back">Terug</button>
+      <button id="topic-start" disabled>Ga naar de kaart</button>
+    </div>
+  </div>
+
+  <!-- SCHERM 3: KAART -->
+  <div class="screen" id="game-screen" style="display:none;">
+    <div class="map-wrapper">
+      <div class="hud hud-only-score">
+          <span id="hud-score">Hondenkoekjes totaal: 0 🍪</span>
+        </div>
+
+      <div class="map-container">
+        <img id="map-image" src="bospad.png" alt="Kaart van het bos">
+        <div id="map"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+        // Veilige storage wrapper (werkt ook als storage geblokkeerd is)
+    const storage = (() => {
+      try {
+        const ls = window.localStorage;
+        const t = "__vb_test__";
+        ls.setItem(t, "1");
+        ls.removeItem(t);
+        return ls;
+      } catch (e) {
+        const mem = {};
+        return {
+          getItem: (k) => (k in mem ? mem[k] : null),
+          setItem: (k, v) => { mem[k] = String(v); },
+          removeItem: (k) => { delete mem[k]; },
+          key: (i) => Object.keys(mem)[i] ?? null,
+          get length() { return Object.keys(mem).length; }
+        };
+      }
+    })();
+
+/*****************************************
+     * 1. BIJ ELKE NIEUWE START: RESET GAME
+     *****************************************/
+
+    // Ben je teruggekomen uit een level?
+    const returningFromLevel =
+      storage.getItem("verhalenbos_returnFromLevel") === "true";
+
+    // NIET terug uit een level = nieuw spel → wis alle spel-data
+    if (!returningFromLevel) {
+      const keysToRemove = [];
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (
+          key.startsWith("verhalenbos_") ||    // avatar, topic, levelX_completed_v2, ...
+          key.startsWith("level1_") ||
+          key.startsWith("level2_") ||
+          key.startsWith("level3_") ||
+          key.startsWith("level4_") ||
+          key.startsWith("level5_") ||
+          key.startsWith("level6_") ||
+          key.startsWith("level7_") ||
+          key.startsWith("level8_") ||
+          key.startsWith("level9_")
+        ) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => storage.removeItem(k));
+    }
+
+    /*****************************************
+     * 2. DATA
+     *****************************************/
+
+    const points = [
+      {"name":"Punt 1","xPercent":20.22732066459396,"yPercent":49.21536285442943},
+      {"name":"Punt 2","xPercent":32.05813994882939,"yPercent":31.06350583833106},
+      {"name":"Punt 3","xPercent":33.88346635268286,"yPercent":64.44669794350284},
+      {"name":"Punt 4","xPercent":52.94798657070796,"yPercent":12.526302456115342},
+      {"name":"Punt 5","xPercent":52.67756784421115,"yPercent":46.599061994713395},
+      {"name":"Punt 6","xPercent":54.232475521567814,"yPercent":83.51121908026603},
+      {"name":"Punt 7","xPercent":71.33645997249104,"yPercent":27.9401707851716},
+      {"name":"Punt 8","xPercent":72.68855360497508,"yPercent":66.77906037827593},
+      {"name":"Punt 9","xPercent":90.87421296188555,"yPercent":48.525796339741255}
+    ];
+
+    const adjacency = {
+      "Punt 1": ["Punt 2","Punt 3"],
+      "Punt 2": ["Punt 1","Punt 4","Punt 5"],
+      "Punt 3": ["Punt 1","Punt 5","Punt 6"],
+      "Punt 4": ["Punt 2","Punt 5","Punt 7"],
+      "Punt 5": ["Punt 2","Punt 3","Punt 4","Punt 6","Punt 7","Punt 8"],
+      "Punt 6": ["Punt 3","Punt 5","Punt 8"],
+      "Punt 7": ["Punt 4","Punt 5","Punt 9"],
+      "Punt 8": ["Punt 5","Punt 6","Punt 9"],
+      "Punt 9": ["Punt 7","Punt 8"]
+    };
+
+    const pointToFile = {
+      "Punt 1": "level1.html",
+      "Punt 2": "level2.html",
+      "Punt 3": "level3.html",
+      "Punt 4": "level4.html",
+      "Punt 5": "level5.html",
+      "Punt 6": "level6.html",
+      "Punt 7": "level7.html",
+      "Punt 8": "level8.html",
+      "Punt 9": "level9.html"
+    };
+
+    const progression = {
+      "Punt 1": ["Punt 2","Punt 3"],
+      "Punt 2": ["Punt 4","Punt 5"],
+      "Punt 3": ["Punt 5","Punt 6"],
+      "Punt 4": ["Punt 7"],
+      "Punt 5": ["Punt 7","Punt 8"],
+      "Punt 6": ["Punt 8"],
+      "Punt 7": ["Punt 9"],
+      "Punt 8": ["Punt 9"]
+    };
+
+    const avatarData = {
+      avatar1: { label: "Avatar 1", emoji: "🧒", img: "persoon1.png" },
+      avatar2: { label: "Avatar 2", emoji: "👦", img: "persoon2.png" },
+      avatar3: { label: "Avatar 3", emoji: "👧", img: "persoon3.png" }
+    };
+
+    const topicData = {
+      "weggelopen-hond":   { label: "De weggelopen hond",   emoji: "🐕‍🦺" },
+      "verdwaalde-jongen": { label: "De verdwaalde jongen", emoji: "🧒" },
+      "schattenjacht":     { label: "Zoektocht naar de schat", emoji: "🗺️" },
+      "natuurbingo":       { label: "Natuurbingo wandeling", emoji: "🌳" }
+    };
+
+    /*****************************************
+     * 3. STATE
+     *****************************************/
+
+    let selectedAvatarKey = null;
+    let selectedTopicKey  = null;
+    let avatarEl          = null;
+    let currentPoint      = "Punt 1";
+
+    const unlocked  = new Set();
+    const completed = new Set();
+    let totalCookies  = 0;
+
+    /*****************************************
+     * 4. DOM
+     *****************************************/
+
+    const avatarScreen = document.getElementById("avatar-screen");
+    const topicScreen  = document.getElementById("topic-screen");
+    const gameScreen   = document.getElementById("game-screen");
+
+    const avatarGrid   = document.getElementById("avatar-grid");
+    const avatarNext   = document.getElementById("avatar-next");
+
+    const topicGrid    = document.getElementById("topic-grid");
+    const topicBack    = document.getElementById("topic-back");
+    const topicStart   = document.getElementById("topic-start");
+    const hudScore       = document.getElementById("hud-score");
+    const mapEl          = document.getElementById("map");
+
+    /*****************************************
+     * 5. HELPERS
+     *****************************************/
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function findPath(start, goal) {
+      if (start === goal) return [start];
+      const queue = [[start]];
+      const visited = new Set([start]);
+      while (queue.length > 0) {
+        const path = queue.shift();
+        const node = path[path.length - 1];
+        const neighbours = adjacency[node] || [];
+        for (const n of neighbours) {
+          if (visited.has(n)) continue;
+          visited.add(n);
+          const newPath = path.concat(n);
+          if (n === goal) return newPath;
+          queue.push(newPath);
+        }
+      }
+      return null;
+    }
+
+    function moveAvatarToPoint(name) {
+      const p = points.find(pt => pt.name === name);
+      if (!p || !avatarEl) return;
+      avatarEl.style.left = p.xPercent + "%";
+      avatarEl.style.top  = p.yPercent + "%";
+    }
+
+    function animatePath(path, onDone) {
+      let i = 1;
+      function step() {
+        if (i >= path.length) {
+          if (onDone) onDone();
+          return;
+        }
+        moveAvatarToPoint(path[i]);
+        i++;
+        setTimeout(step, 850);
+      }
+      step();
+    }
+
+    function updateStarsFromStorage() {
+          // 🍪 Koekjes totaal (som van levels of total key)
+          let totalCookies = 0;
+          let foundAny = false;
+
+          // Probeer per-level koekjes (level1..level9)
+          for (let i = 1; i <= 9; i++) {
+            const v = storage.getItem("verhalenbos_level" + i + "_koekjes");
+            if (v !== null && !isNaN(parseInt(v, 10))) {
+              totalCookies += parseInt(v, 10);
+              foundAny = true;
+            }
+          }
+
+          // Fallback: totaal-key (die levels kunnen bijhouden)
+          if (!foundAny) {
+            const keys = ["verhalenbos_koekjes_total","koekjes_total","verhalenbos_sterren_total","sterren_total"];
+            for (const k of keys) {
+              const v = storage.getItem(k);
+              if (v !== null && !isNaN(parseInt(v, 10))) {
+                totalCookies = parseInt(v, 10);
+                break;
+              }
+            }
+          }
+
+          // Zorg dat alle totaal-keys gelijk lopen (handig voor andere pagina's)
+          const syncKeys = ["verhalenbos_koekjes_total","koekjes_total","verhalenbos_sterren_total","sterren_total"];
+          for (const k of syncKeys) storage.setItem(k, String(totalCookies));
+
+          hudScore.textContent = "Hondenkoekjes totaal: " + totalCookies + " 🍪";
+          // Alleen totaal tonen
+        }
+
+
+    function updateUnlockedAndCompletedFromStorage() {
+      unlocked.clear();
+      completed.clear();
+
+      // Punt 1 is altijd beschikbaar
+      unlocked.add("Punt 1");
+
+      // Level is pas "behaald" als er minimaal 3 koekjes zijn verdiend
+      function levelPassed(i) {
+        const v = storage.getItem("verhalenbos_level" + i + "_koekjes");
+        const n = v === null ? 0 : parseInt(v, 10);
+        return Number.isFinite(n) && n >= 3;
+      }
+
+      for (let i = 1; i <= 9; i++) {
+        if (levelPassed(i)) {
+          completed.add("Punt " + i);
+          // Houd een completed-flag bij voor compatibiliteit met bestaande levels
+          storage.setItem("verhalenbos_level" + i + "_completed_v2", "true");
+        } else {
+          storage.removeItem("verhalenbos_level" + i + "_completed_v2");
+        }
+      }
+
+      // Ontgrendel volgende punten op basis van behaalde punten
+      completed.forEach(pointName => {
+        (progression[pointName] || []).forEach(p => unlocked.add(p));
+      });
+    }
+
+
+    function drawMap() {
+      mapEl.innerHTML = "";
+
+      points.forEach(p => {
+        const el = document.createElement("div");
+        el.className = "point";
+        el.dataset.name = p.name;
+        el.style.left = p.xPercent + "%";
+        el.style.top  = p.yPercent + "%";
+
+        if (!unlocked.has(p.name)) el.classList.add("locked");
+        if (completed.has(p.name)) el.classList.add("completed");
+
+        el.addEventListener("click", () => handlePointClick(p.name));
+        mapEl.appendChild(el);
+      });
+
+      const avatar = avatarData[selectedAvatarKey];
+      const startPoint = points.find(p => p.name === currentPoint) || points[0];
+
+      avatarEl = document.createElement("div");
+      avatarEl.className = "avatar-on-map";
+      const img = document.createElement("img");
+      img.src = avatar.img;
+      img.alt = avatar.label;
+      avatarEl.appendChild(img);
+
+      avatarEl.style.left = startPoint.xPercent + "%";
+      avatarEl.style.top  = startPoint.yPercent + "%";
+
+      mapEl.appendChild(avatarEl);
+    }
+
+    function openLevelFile(pointName) {
+      const file = pointToFile[pointName];
+      if (!file) {
+        alert("Voor " + pointName + " is nog geen levelbestand ingesteld.");
+        return;
+      }
+      storage.setItem("verhalenbos_avatar", selectedAvatarKey || "");
+      storage.setItem("verhalenbos_topic",  selectedTopicKey || "");
+      storage.setItem("verhalenbos_returnFromLevel", "true");
+      window.location.href = file;
+    }
+
+    function handlePointClick(targetPoint) {
+      if (!unlocked.has(targetPoint)) {
+        alert("Deze is nog niet vrijgespeeld.");
+        return;
+      }
+
+      if (targetPoint === currentPoint) {
+        openLevelFile(targetPoint);
+        return;
+      }
+
+      const path = findPath(currentPoint, targetPoint);
+      const finalPath = path || [currentPoint, targetPoint];
+
+      animatePath(finalPath, () => {
+        currentPoint = targetPoint;
+        openLevelFile(targetPoint);
+      });
+    }
+
+    /*****************************************
+     * 6. AVATAR & TOPIC KEUZE
+     *****************************************/
+
+    avatarGrid.addEventListener("click", (e) => {
+      const img = e.target.closest(".avatar-choice");
+      if (!img) return;
+      selectedAvatarKey = img.dataset.avatar;
+      document.querySelectorAll(".avatar-choice").forEach(el =>
+        el.classList.toggle("selected", el === img)
+      );
+      avatarNext.disabled = !selectedAvatarKey;
+    });
+
+    avatarNext.addEventListener("click", () => {
+      if (!selectedAvatarKey) return;
+      avatarScreen.style.display = "none";
+      topicScreen.style.display  = "block";
+    });
+
+    topicGrid.addEventListener("click", (e) => {
+      const card = e.target.closest(".card");
+      if (!card) return;
+      selectedTopicKey = card.dataset.topic;
+      topicGrid.querySelectorAll(".card").forEach(c =>
+        c.classList.toggle("selected", c === card)
+      );
+      topicStart.disabled = false;
+    });
+
+    topicBack.addEventListener("click", () => {
+      topicScreen.style.display  = "none";
+      avatarScreen.style.display = "block";
+    });
+
+    topicStart.addEventListener("click", () => {
+      if (!selectedAvatarKey || !selectedTopicKey) return;
+
+      storage.setItem("verhalenbos_avatar", selectedAvatarKey);
+      storage.setItem("verhalenbos_topic",  selectedTopicKey);
+
+      avatarScreen.style.display = "none";
+      topicScreen.style.display  = "none";
+      gameScreen.style.display   = "block";
+
+      currentPoint = "Punt 1";
+      updateStarsFromStorage();
+      updateUnlockedAndCompletedFromStorage();
+      drawMap();
+    });
+
+    /*****************************************
+     * 7. START-UP LOGICA
+     *****************************************/
+
+    document.addEventListener("DOMContentLoaded", () => {
+      updateStarsFromStorage();
+      updateUnlockedAndCompletedFromStorage();
+
+      const savedAvatar = storage.getItem("verhalenbos_avatar");
+      const savedTopic  = storage.getItem("verhalenbos_topic");
+
+      if (returningFromLevel && savedAvatar && avatarData[savedAvatar]) {
+        // we komen TERUG uit een level → direct naar kaart
+        storage.removeItem("verhalenbos_returnFromLevel");
+
+        selectedAvatarKey = savedAvatar;
+        selectedTopicKey  = savedTopic in topicData ? savedTopic : null;
+        avatarScreen.style.display = "none";
+        topicScreen.style.display  = "none";
+        gameScreen.style.display   = "block";
+
+        currentPoint = "Punt 1";
+          drawMap();
+      } else {
+        // nieuw spel
+        avatarScreen.style.display = "block";
+        topicScreen.style.display  = "none";
+        gameScreen.style.display   = "none";
+      }
+    });
+  </script>
+</body>
+</html>
+

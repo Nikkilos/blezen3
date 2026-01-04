@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>platform zinnen sprong – spel 6</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body {
+      margin: 0; background: #333; color: #f5f5f5;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; padding: 20px;
+    }
+
+    #level6 { width: 100%; display: flex; flex-direction: column; align-items: center; }
+
+    .plat-game-container {
+      position: relative; border-radius: 16px; border: 1px solid #1f2937;
+      background: #000; padding: 10px 14px 14px; margin-top: 8px;
+      width: 95%; max-width: 1600px; overflow: hidden;
+    }
+
+    .plat-top-row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; flex-wrap: wrap; margin-bottom: 6px;
+    }
+
+    .plat-game-title { font-size: 1rem; font-weight: 600; }
+    .plat-badge {
+      font-size: 0.8rem; padding: 4px 10px; border-radius: 999px;
+      background: rgba(250, 204, 21, 0.08); border: 1px solid #facc15; color: #facc15;
+    }
+
+    .iconBtn{
+      padding: 8px 12px; border-radius: 999px; border: 1px solid #1f2937;
+      background: rgba(255,255,255,.06); color: #e5e7eb; font-weight: 900;
+      cursor: pointer;
+    }
+    .iconBtn:hover{ filter: brightness(1.06); transform: translateY(-1px); }
+    .iconBtn:active{ transform: translateY(1px); }
+
+    .plat-game-field {
+      position: relative; height: 550px; border-radius: 12px; border: 1px solid #1f2937;
+      overflow: hidden; margin-bottom: 10px; background: #000;
+    }
+
+    .plat-world {
+      position: absolute; top: 0; left: 0; height: 100%;
+      width: 120%;
+      background: url("wandelguy.png") center center repeat-x;
+      background-size: auto 100%;
+      transition: transform 0.1s linear;
+    }
+
+    .plat-platform {
+      position: absolute; min-width: 90px; height: 44px; padding: 3px 6px;
+      border-radius: 6px; background: url("brick.png") center/cover no-repeat;
+      font-size: 0.9rem; text-align: center; color: #f9fafb;
+      display: flex; align-items: center; justify-content: center;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+      white-space: nowrap;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .plat-platform.collected { opacity: 0; pointer-events: none; transform: scale(0.5); }
+
+    .plat-sparkle {
+      position: absolute; width: 8px; height: 8px; border-radius: 50%;
+      background: radial-gradient(circle, #fef9c3 0%, #facc15 40%, #ea580c 100%);
+      pointer-events: none; opacity: 0;
+      animation: sparklePop 0.6s ease-out forwards;
+      box-shadow: 0 0 10px rgba(250, 204, 21, 0.9);
+    }
+    @keyframes sparklePop {
+      0% { transform: scale(0.3); opacity: 0; }
+      20% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.1) translateY(-20px); opacity: 0; }
+    }
+
+    .plat-ground-strip {
+      position: absolute; height: 32px; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.4), #022c22);
+      border-top: 2px solid rgba(16, 185, 129, 0.6);
+      width: 100%;
+    }
+
+    .plat-player {
+      position: absolute; width: 80px; height: 110px; bottom: 32px; left: 40px;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none; z-index: 5;
+    }
+    .plat-player img { width: 80px; height: 110px; object-fit: contain; image-rendering: crisp-edges; }
+    .plat-player.jump { animation: jumpArc 0.55s ease-out; }
+    @keyframes jumpArc {
+      0% { transform: translateY(0); }
+      40% { transform: translateY(-130px); }
+      80% { transform: translateY(-20px); }
+      100% { transform: translateY(0); }
+    }
+
+    .plat-sentence-bar {
+      border-radius: 999px; background: #020617; border: 1px solid #1f2937;
+      padding: 8px 12px; font-size: 0.95rem; display: flex; flex-wrap: wrap;
+      gap: 6px; margin-bottom: 6px;
+    }
+    .plat-sentence-label { color: #9ca3af; margin-right: 4px; }
+    .plat-sentence-chosen { color: #e5e7eb; min-height: 1.2em; }
+    .plat-sentence-progress { margin-top: 2px; font-size: 0.85rem; color: #a5b4fc; width: 100%; }
+
+    .plat-controls-row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; flex-wrap: wrap; margin-top: 4px;
+    }
+    .plat-control-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .plat-btn-control {
+      border-radius: 999px; border: 1px solid #4b5563; background: #111827;
+      color: #e5e7eb; padding: 6px 12px; font-size: 0.85rem;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+      transition: background 0.15s, transform 0.05s, box-shadow 0.1s;
+    }
+    .plat-btn-control:hover { background: #1f2937; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
+    .plat-btn-control:active { transform: translateY(1px); box-shadow: none; }
+
+    .plat-feedback { font-size: 0.95rem; min-height: 22px; margin-top: 4px; }
+    .plat-feedback.ok { color: #4ade80; }
+    .plat-feedback.error { color: #fb7185; }
+
+    .krulletje {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-size: 140px; color: #22c55e; opacity: 0; pointer-events: none;
+      z-index: 20; text-shadow: 0 0 25px rgba(0,0,0,0.8); font-weight: bold;
+    }
+    .krulletje.show { animation: krulPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    @keyframes krulPop {
+      0% { transform: translate(-50%, -50%) scale(0) rotate(-20deg); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    .error-popup {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.85);
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 50; text-align: center; padding: 24px; backdrop-filter: blur(4px);
+    }
+    .error-popup.active { display: flex; animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+    .error-popup h2 { color:#fb7185; margin:0 0 10px; font-size: 2rem; }
+    .error-popup p { color:#e5e7eb; font-size: 1.1rem; margin: 0 0 18px; }
+    .error-btn-row { display:flex; gap: 16px; }
+    .err-btn {
+      padding: 10px 24px; border-radius: 999px; border: none;
+      font-size: 1rem; cursor: pointer; font-weight: 800;
+      transition: transform 0.1s, filter 0.1s;
+    }
+    .err-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
+    .err-btn-undo {
+      background: #fbbf24; color: #3f2c00; box-shadow: 0 4px 10px rgba(251,191,36,0.3);
+    }
+
+    .overlay {
+      position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+      background: rgba(0,0,0,.72); backdrop-filter: blur(2px); z-index: 80;
+    }
+    .overlay.show{ display:flex; }
+    .listen-card{
+      text-align:center; padding: 16px 18px; border-radius: 16px;
+      border: 1px solid #1f2937; background: rgba(10,10,10,.92);
+      box-shadow: 0 10px 30px rgba(0,0,0,.55); max-width: 820px;
+    }
+    .listen-card .icon{ font-size: 44px; margin-bottom: 6px; }
+    .listen-card .title{ font-weight: 900; margin-bottom: 6px; }
+    .listen-card .small{ color:#cbd5e1; font-size: 14px; }
+    .end-wrap{ display:flex; flex-direction:column; align-items:center; gap: 12px; }
+    .end-img{
+      width:min(760px, 92vw); max-height:min(380px, 46vh);
+      object-fit:contain; border-radius:14px; border:1px solid #1f2937;
+      box-shadow: 0 12px 30px rgba(0,0,0,.5);
+      background: rgba(255,255,255,.04);
+    }
+    .cookies{ font-weight: 900; font-size: 20px; color: #fde68a; }
+
+    @media (max-width: 768px) { .plat-game-field { height: 320px; } }
+  </style>
+</head>
+<body>
+  <div id="level6" class="level" style="display:block;">
+    <div class="plat-game-container">
+      <div class="plat-top-row">
+        <div class="plat-game-title">platform-sprong-game – hond op zoek</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div class="plat-badge" id="platLevelBadge">level 1 / 7</div>
+          <div class="plat-badge" id="mistakeBadge">fouten: 0</div>
+          <button class="iconBtn" id="helpBtn" title="uitleg luisteren">🎧</button>
+        </div>
+      </div>
+
+      <div class="plat-game-field" id="platGameField">
+        <div class="plat-world" id="platWorld">
+          <div class="plat-ground-strip"></div>
+          <div class="plat-player" id="platPlayer">
+            <img id="platPlayerSprite" src="wandelen1.png" alt="poppetje">
+          </div>
+        </div>
+        <div id="krulletje" class="krulletje">✔</div>
+
+        <div class="overlay" id="overlay" aria-hidden="true">
+          <div class="listen-card">
+            <div class="icon" id="overlayIcon">🎧</div>
+            <div class="title" id="overlayTitle">luister…</div>
+            <div class="small" id="overlaySmall">even luisteren…</div>
+            <div id="overlayExtra" style="margin-top:10px;display:none"></div>
+            <div id="overlayTap" style="margin-top:12px;display:none">
+              <button id="overlayTapBtn" class="plat-btn-control" style="font-size:1rem;padding:10px 18px;border-radius:999px;border:1px solid #facc15;color:#facc15;background:rgba(250,204,21,.06)">
+                tik om te luisteren
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="plat-sentence-bar">
+        <div class="plat-sentence-label">jouw zin:</div>
+        <div class="plat-sentence-chosen" id="platSentenceChosen"></div>
+        <div class="plat-sentence-progress" id="platSentenceProgress"></div>
+      </div>
+
+      <div class="plat-controls-row">
+        <div class="plat-control-group">
+          <button class="plat-btn-control" id="platBtnLeft">◀️ links</button>
+          <button class="plat-btn-control" id="platBtnRight">▶️ rechts</button>
+          <button class="plat-btn-control" id="platBtnJump">🪄 spring!</button>
+        </div>
+        <div class="plat-control-group">
+          <button class="plat-btn-control" id="platBtnUndo">↩️ 1 woord terug</button>
+        </div>
+      </div>
+      <div class="plat-feedback" id="platFeedback"></div>
+
+      <div id="errorPopup" class="error-popup">
+        <h2>bijna…</h2>
+        <p id="errHint">zoek: …</p>
+        <div class="error-btn-row">
+          <button class="err-btn err-btn-undo" id="btnErrUndo">↩️ 1 woord terug</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ====== BESTANDEN ======
+  // Als je audio in een map staat, zet bv: const AUDIO_BASE = "audio/";
+  const AUDIO_BASE = "";
+
+  const INTRO_AUDIO = AUDIO_BASE + "uitlegspel6.mp4";
+  const END_IMAGE   = "eindspel6.png";
+  const END_AUDIO   = AUDIO_BASE + "eindspel6.mp4";
+
+  // ====== ZINNEN (kleine letters) ======
+  const platLevels = [
+    { speak: "door mist zie ik niks.", orders: [["door","mist","zie","ik","niks"], ["ik","zie","niks","door","mist"]] },
+    { speak: "boris ziet een riem.", orders: [["boris","ziet","een","riem"]] },
+    { speak: "de riem is van keesje.", orders: [["de","riem","is","van","keesje"]] },
+    { speak: "we horen een geluid.", orders: [["we","horen","een","geluid"]] },
+    { speak: "het was een das.", orders: [["het","was","een","das"]] },
+    { speak: "de das rent weg.", orders: [["de","das","rent","weg"]] },
+    { speak: "boris is bang.", orders: [["boris","is","bang"]] }
+  ];
+
+  // ====== DOM ======
+  const platGameField = document.getElementById("platGameField");
+  const platWorld = document.getElementById("platWorld");
+  const platPlayerEl = document.getElementById("platPlayer");
+  const platPlayerSprite = document.getElementById("platPlayerSprite");
+  const platLevelBadge = document.getElementById("platLevelBadge");
+  const mistakeBadge = document.getElementById("mistakeBadge");
+  const platSentenceChosenEl = document.getElementById("platSentenceChosen");
+  const platSentenceProgressEl = document.getElementById("platSentenceProgress");
+  const platFeedbackEl = document.getElementById("platFeedback");
+  const krulletjeEl = document.getElementById("krulletje");
+
+  const btnL = document.getElementById("platBtnLeft");
+  const btnR = document.getElementById("platBtnRight");
+  const btnJ = document.getElementById("platBtnJump");
+  const btnU = document.getElementById("platBtnUndo");
+
+  const errorPopup = document.getElementById("errorPopup");
+  const errHint = document.getElementById("errHint");
+  const btnErrUndo = document.getElementById("btnErrUndo");
+
+  const helpBtn = document.getElementById("helpBtn");
+
+  const overlay = document.getElementById("overlay");
+  const overlayIcon = document.getElementById("overlayIcon");
+  const overlayTitle = document.getElementById("overlayTitle");
+  const overlaySmall = document.getElementById("overlaySmall");
+  const overlayExtra = document.getElementById("overlayExtra");
+  const overlayTap = document.getElementById("overlayTap");
+  const overlayTapBtn = document.getElementById("overlayTapBtn");
+
+  // ====== AUDIO (1 element, nooit overlap) ======
+  const audio = new Audio();
+  audio.preload = "auto";
+
+  function stopAllAudio(){
+    try{ audio.pause(); audio.currentTime = 0; }catch(_){}
+    try{ if ("speechSynthesis" in window) window.speechSynthesis.cancel(); }catch(_){}
+  }
+
+  // Speelt audio af en geeft true/false terug (ended = true, error = false)
+  function playFileWait(src, vol){
+    stopAllAudio();
+    audio.volume = vol;
+    audio.src = src;
+    audio.load();
+
+    const triedUrl = new URL(src, window.location.href).href;
+
+    return new Promise(async (resolve) => {
+      let done = false;
+
+      const cleanup = () => {
+        audio.onended = null;
+        audio.onerror = null;
+        audio.onstalled = null;
+        audio.onabort = null;
+      };
+
+      audio.onended = () => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve({ ok:true, triedUrl });
+      };
+
+      const fail = () => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve({ ok:false, triedUrl });
+      };
+
+      audio.onerror = fail;
+      audio.onstalled = fail;
+      audio.onabort = fail;
+
+      try{
+        await audio.play(); // kan rejecten door autoplay
+      }catch(_){
+        // autoplay blocked (niet per se "not found")
+        cleanup();
+        resolve({ ok:false, triedUrl, autoplayBlocked:true });
+      }
+    });
+  }
+
+  // ====== TTS (alleen 2 zinnen) ======
+  function speak(text){
+    try{
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "nl-NL";
+      u.rate = 1.0; // normaal tempo
+      window.speechSynthesis.speak(u);
+    }catch(_){}
+  }
+
+  // ====== OVERLAY ======
+  function showOverlay(icon, title, small, extraHtml=null, showTap=false){
+    overlayIcon.textContent = icon || "🎧";
+    overlayTitle.textContent = title || "";
+    overlaySmall.textContent = small || "";
+    if (extraHtml){
+      overlayExtra.style.display = "block";
+      overlayExtra.innerHTML = extraHtml;
+    } else {
+      overlayExtra.style.display = "none";
+      overlayExtra.innerHTML = "";
+    }
+    overlayTap.style.display = showTap ? "block" : "none";
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden","false");
+  }
+  function hideOverlay(){
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden","true");
+    overlayExtra.style.display = "none";
+    overlayExtra.innerHTML = "";
+    overlayTap.style.display = "none";
+  }
+
+  // ====== KOEKJES ======
+  function addCookiesToTotal(earned){
+    const keys = ["verhalenbos_koekjes_total","verhalenbos_sterren_total","koekjes_total","sterren_total"];
+    let base = 0;
+    for (const k of keys){
+      const v = localStorage.getItem(k);
+      if (v !== null && !isNaN(parseInt(v,10))){ base = parseInt(v,10); break; }
+    }
+    const newTotal = base + earned;
+    for (const k of keys) localStorage.setItem(k, String(newTotal));
+
+    localStorage.setItem("verhalenbos_level6_koekjes", String(earned));
+    localStorage.setItem("verhalenbos_level6_completed", "true");
+    localStorage.setItem("verhalenbos_returnFromLevel", "true");
+  }
+  function cookiesForMistakes(m){
+    if (m <= 2) return 5;
+    if (m <= 4) return 4;
+    if (m <= 6) return 3;
+    if (m <= 8) return 2;
+    return 1;
+  }
+
+  // ====== STATE ======
+  let platCurrentLevelIndex = 0;
+  let platPlatforms = [];
+  let platChosenItems = [];
+  let platPlayerX = 100;
+  let platDirection = "right";
+  let platWalkingFrame = 0;
+  let platIsJumping = false;
+  let platCanControl = false; // pas na uitleg
+  let platLastWalkSprite = "wandelen1.png";
+  let platNextLevelTimer = null;
+  let mistakes = 0;
+  let finished = false;
+  let ttsLevelsLeft = 2;
+
+  function setMistakeBadge(){ mistakeBadge.textContent = `fouten: ${mistakes}`; }
+
+  function shuffle(arr){
+    for (let i=0;i<arr.length;i++){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function platCreateSparkles() {
+    const fieldRect = platGameField.getBoundingClientRect();
+    for (let i=0;i<15;i++){
+      const s = document.createElement("div");
+      s.className = "plat-sparkle";
+      s.style.left = (Math.random()*fieldRect.width) + "px";
+      s.style.top  = (20 + Math.random()*(fieldRect.height-40)) + "px";
+      platGameField.appendChild(s);
+      setTimeout(()=>s.remove(), 700);
+    }
+  }
+
+  function platUpdateCamera() {
+    const viewportW = platGameField.clientWidth;
+    const worldW = platWorld.clientWidth;
+    let targetX = -(platPlayerX - viewportW / 2 + 40);
+    const minX = -(worldW - viewportW);
+    const maxX = 0;
+    if (targetX > maxX) targetX = maxX;
+    if (targetX < minX) targetX = minX;
+    platWorld.style.transform = `translateX(${targetX}px)`;
+  }
+
+  // ====== PLATFORMS (NU BINNEN 1 VIEWPORT, DICHTER OP ELKAAR) ======
+  function platCreatePlatformsForLevel(level) {
+    platPlatforms.forEach(p => p.el.remove());
+    platPlatforms = [];
+
+    const words = [...level.orders[0]];
+    shuffle(words);
+
+    const viewportW = platGameField.clientWidth;
+    const baseY = 235;
+    const count = words.length;
+
+    // plaats in de eerste viewport (zodat alles meteen in beeld is)
+    const padding = 70;
+    const usable = Math.max(0, viewportW - 2*padding);
+    const step = count > 1 ? usable / (count - 1) : 0;
+
+    // zet world-breedte wel ruim, maar plaatsen doen we in viewport-gebied
+    const startX = padding;
+
+    words.forEach((word, i) => {
+      const el = document.createElement("div");
+      el.className = "plat-platform";
+      el.textContent = word;
+      platWorld.appendChild(el);
+
+      const width = el.getBoundingClientRect().width || 90;
+
+      const centerX = (count === 1) ? (viewportW/2) : (startX + i*step);
+      let left = centerX - width/2;
+
+      // clamp zodat platform niet uit viewport valt
+      left = Math.max(10, Math.min(viewportW - width - 10, left));
+
+      el.style.left = left + "px";
+      el.style.bottom = (baseY + (Math.random()*40 - 20)) + "px";
+
+      platPlatforms.push({ el, word, chosen:false });
+    });
+  }
+
+  function platUpdateChosenSentenceDisplay() {
+    if (!platCanControl && !finished){
+      platSentenceChosenEl.textContent = "";
+      platSentenceProgressEl.textContent = "even luisteren…";
+      return;
+    }
+    if (platChosenItems.length === 0) {
+      platSentenceChosenEl.textContent = "";
+      platSentenceProgressEl.textContent = "zoek de woorden en spring ertegenaan.";
+    } else {
+      platSentenceChosenEl.textContent = platChosenItems.map(p=>p.word).join(" ");
+      platSentenceProgressEl.textContent = "bouw de zin…";
+    }
+  }
+
+  function platUpdatePlayerPosition() {
+    const viewportW = platGameField.clientWidth;
+    const minX = 10;
+    const maxX = viewportW - 90; // we houden speler in viewport-startgebied
+    if (platPlayerX < minX) platPlayerX = minX;
+    if (platPlayerX > maxX) platPlayerX = maxX;
+    platPlayerEl.style.left = platPlayerX + "px";
+    platUpdateCamera();
+  }
+
+  function platLoadLevel(index) {
+    if (index >= platLevels.length) return finishGame();
+
+    platCurrentLevelIndex = index;
+    const level = platLevels[index];
+
+    platChosenItems = [];
+    platFeedbackEl.textContent = "";
+    platFeedbackEl.className = "plat-feedback";
+    krulletjeEl.classList.remove("show");
+    errorPopup.classList.remove("active");
+
+    if (platNextLevelTimer) { clearTimeout(platNextLevelTimer); platNextLevelTimer = null; }
+
+    platLevelBadge.textContent = `level ${index + 1} / ${platLevels.length}`;
+
+    requestAnimationFrame(() => {
+      platCreatePlatformsForLevel(level);
+
+      // start speler in het midden van viewport (zodat alles meteen lekker staat)
+      platPlayerX = Math.floor(platGameField.clientWidth * 0.45);
+      platUpdatePlayerPosition();
+      platUpdateCamera();
+    });
+
+    platDirection = "right";
+    platWalkingFrame = 0;
+    platLastWalkSprite = "wandelen1.png";
+    platPlayerSprite.src = platLastWalkSprite;
+
+    platUpdateChosenSentenceDisplay();
+
+    // eerste 2 zinnen pas NA uitleg
+    if (ttsLevelsLeft > 0){
+      ttsLevelsLeft--;
+      setTimeout(() => speak(level.speak), 250);
+    }
+  }
+
+  function platMovePlayer(delta) {
+    if (!platCanControl || finished) return;
+    platPlayerX += delta;
+
+    const newDir = delta > 0 ? "right" : "left";
+    if (newDir !== platDirection) platWalkingFrame = 0;
+    else platWalkingFrame = 1 - platWalkingFrame;
+    platDirection = newDir;
+
+    const sprites = newDir === "right"
+      ? ["wandelen1.png", "wandelen2.png"]
+      : ["wandelen3.png", "wandelen4.png"];
+
+    platLastWalkSprite = sprites[platWalkingFrame];
+    if (!platIsJumping) platPlayerSprite.src = platLastWalkSprite;
+
+    platUpdatePlayerPosition();
+  }
+
+  function platDoJump() {
+    if (!platCanControl || platIsJumping || finished) return;
+
+    platIsJumping = true;
+    const previousSprite = platLastWalkSprite;
+    platPlayerSprite.src = "poppetjespring.png";
+    platPlayerEl.classList.add("jump");
+
+    setTimeout(platHandleJumpHit, 200);
+
+    setTimeout(() => {
+      platPlayerEl.classList.remove("jump");
+      platIsJumping = false;
+      platPlayerSprite.src = previousSprite;
+    }, 550);
+  }
+
+  function platHandleJumpHit() {
+    const playerRect = platPlayerEl.getBoundingClientRect();
+    const playerCenterX = playerRect.left + playerRect.width / 2;
+
+    let hitPlatform = null;
+    platPlatforms.forEach(p => {
+      if (p.chosen) return;
+      const rect = p.el.getBoundingClientRect();
+      const rectCenterX = rect.left + rect.width / 2;
+      if (Math.abs(rectCenterX - playerCenterX) < rect.width / 1.5) hitPlatform = p;
+    });
+
+    if (hitPlatform) {
+      hitPlatform.chosen = true;
+      hitPlatform.el.classList.add("collected");
+      platChosenItems.push(hitPlatform);
+      platUpdateChosenSentenceDisplay();
+      platCheckAuto();
+    }
+  }
+
+  function ordersMatch(chosenWords, orders){
+    for (const ord of orders){
+      if (ord.length !== chosenWords.length) continue;
+      let ok = true;
+      for (let i=0;i<ord.length;i++){
+        if (chosenWords[i] !== ord[i]) { ok = false; break; }
+      }
+      if (ok) return true;
+    }
+    return false;
+  }
+
+  function platCheckAuto() {
+    const level = platLevels[platCurrentLevelIndex];
+    const targetLen = level.orders[0].length;
+
+    if (platChosenItems.length === targetLen) {
+      const chosen = platChosenItems.map(p => p.word);
+      const correct = ordersMatch(chosen, level.orders);
+
+      if (correct) {
+        platCanControl = false;
+        platFeedbackEl.textContent = "super!";
+        platFeedbackEl.className = "plat-feedback ok";
+        platCreateSparkles();
+        krulletjeEl.classList.add("show");
+
+        platSentenceProgressEl.textContent = "volgende zin…";
+        platNextLevelTimer = setTimeout(() => {
+          platCanControl = true;
+          krulletjeEl.classList.remove("show");
+          platLoadLevel(platCurrentLevelIndex + 1);
+        }, 1100);
+
+      } else {
+        mistakes++;
+        setMistakeBadge();
+
+        const expected = level.orders[0];
+        let need = expected[0];
+        for (let i=0;i<expected.length;i++){
+          if (chosen[i] !== expected[i]) { need = expected[i]; break; }
+        }
+
+        // DIRECTE feedback
+        platFeedbackEl.textContent = `bijna… zoek: ${need}`;
+        platFeedbackEl.className = "plat-feedback error";
+        errHint.textContent = `zoek: ${need}`;
+        errorPopup.classList.add("active");
+        speak(`bijna. zoek ${need}.`);
+      }
+    }
+  }
+
+  function platUndoLast() {
+    if (platChosenItems.length === 0) return;
+    const lastItem = platChosenItems.pop();
+    lastItem.chosen = false;
+    lastItem.el.classList.remove("collected");
+    platUpdateChosenSentenceDisplay();
+    errorPopup.classList.remove("active");
+    krulletjeEl.classList.remove("show");
+  }
+
+  async function finishGame(){
+    if (finished) return;
+    finished = true;
+    platCanControl = false;
+    stopAllAudio();
+    if (platNextLevelTimer) clearTimeout(platNextLevelTimer);
+    errorPopup.classList.remove("active");
+
+    const earned = cookiesForMistakes(mistakes);
+    addCookiesToTotal(earned);
+
+    showOverlay("🏁", "einde!", "even luisteren…",
+      `<div class="end-wrap">
+        <img class="end-img" src="${END_IMAGE}" alt="eindspel">
+        <div class="small" style="color:#cbd5e1">na de audio zie je je hondenkoekjes.</div>
+      </div>`
+    );
+
+    const endRes = await playFileWait(END_AUDIO, 1.0);
+    if (!endRes.ok){
+      overlaySmall.textContent = "eind-audio niet gevonden of autoplay geblokkeerd.";
+      overlayExtra.style.display = "block";
+      overlayExtra.innerHTML = `<div class="small" style="color:#cbd5e1">geprobeerd: ${endRes.triedUrl}</div>`;
+      await new Promise(r => setTimeout(r, 900));
+    }
+
+    showOverlay("🍪", "jouw beloning!", "goed gedaan!",
+      `<div class="end-wrap">
+        <img class="end-img" src="${END_IMAGE}" alt="eindspel">
+        <div class="cookies">+ ${earned} hondenkoekje${earned===1?"":"s"} 🍪</div>
+      </div>`
+    );
+
+    await new Promise(r => setTimeout(r, 1500));
+    window.location.href = "index.html";
+  }
+
+  // ====== UITLEG FLOW (VERPLICHT) ======
+  async function startOnOpen(){
+    setMistakeBadge();
+    platSentenceChosenEl.textContent = "";
+    platSentenceProgressEl.textContent = "even luisteren…";
+
+    showOverlay("🎧", "uitleg", "even luisteren…");
+
+    const res = await playFileWait(INTRO_AUDIO, 0.75);
+    if (res.ok){
+      hideOverlay();
+      platCanControl = true;
+      platLoadLevel(0); // eerste zin verschijnt + pas dan tts
+      return;
+    }
+
+    // audio faalt: autoplay of niet gevonden -> duidelijke melding + tap
+    const msg = res.autoplayBlocked
+      ? "autoplay is geblokkeerd. tik om de uitleg te starten."
+      : "audio niet gevonden. tik om opnieuw te proberen.";
+
+    showOverlay("🎧", "uitleg", msg,
+      `<div class="small" style="color:#cbd5e1">geprobeerd: ${res.triedUrl}</div>`,
+      true
+    );
+  }
+
+  overlayTapBtn.addEventListener("click", async () => {
+    overlayTapBtn.blur();
+    overlaySmall.textContent = "even luisteren…";
+    overlayExtra.style.display = "none";
+    overlayExtra.innerHTML = "";
+
+    const res = await playFileWait(INTRO_AUDIO, 0.75);
+    if (res.ok){
+      hideOverlay();
+      platCanControl = true;
+      platLoadLevel(0);
+      return;
+    }
+
+    showOverlay("🎧", "uitleg", "het lukt nog niet. controleer de bestandsnaam en map.",
+      `<div class="small" style="color:#cbd5e1">geprobeerd: ${res.triedUrl}</div>`,
+      true
+    );
+  });
+
+  // help: uitleg opnieuw, zonder overlap
+  helpBtn.addEventListener("click", async () => {
+    if (finished) return;
+    platCanControl = false;
+    showOverlay("🎧", "uitleg", "even luisteren…");
+
+    const res = await playFileWait(INTRO_AUDIO, 0.75);
+    if (res.ok){
+      hideOverlay();
+      platCanControl = true;
+      platUpdateChosenSentenceDisplay();
+      return;
+    }
+
+    showOverlay("🎧", "uitleg", "tik om de uitleg te starten.",
+      `<div class="small" style="color:#cbd5e1">geprobeerd: ${res.triedUrl}</div>`,
+      true
+    );
+  });
+
+  // ====== CONTROLS ======
+  btnL.addEventListener("click", () => platMovePlayer(-35));
+  btnR.addEventListener("click", () => platMovePlayer(35));
+  btnJ.addEventListener("click", () => platDoJump());
+  btnU.addEventListener("click", () => platUndoLast());
+  btnErrUndo.addEventListener("click", () => platUndoLast());
+
+  document.addEventListener("keydown", (e) => {
+    if (!document.hasFocus()) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); platMovePlayer(-30); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); platMovePlayer(30); }
+    else if (e.key === " " || e.key === "ArrowUp") { e.preventDefault(); platDoJump(); }
+  });
+
+  window.addEventListener("resize", () => platUpdateCamera());
+  window.addEventListener("load", startOnOpen);
+})();
+</script>
+</body>
+</html>
